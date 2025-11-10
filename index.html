@@ -1,0 +1,483 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2685.1">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!doctype html&gt;</p>
+<p class="p1">&lt;html lang="es"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta charset="utf-8" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;title&gt;QuizBuzzer P2P (HTML/JS)&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- PeerJS (CDN) --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"&gt;&lt;/script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>:root{</p>
+<p class="p1"><span class="Apple-converted-space">      </span>--indigo:#4f46e5; --indigo-700:#4338ca; --rose:#e11d48; --amber:#f59e0b;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>--slate-900:#0f172a; --slate-800:#1e293b; --slate-700:#334155; --slate-600:#475569; --slate-500:#64748b; --slate-300:#cbd5e1; --slate-200:#e2e8f0; --slate-100:#f1f5f9; --white:#fff;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>*{box-sizing:border-box}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:var(--slate-100);color:var(--slate-900)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>header{background:var(--indigo);color:#fff;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.1)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>header .wrap{max-width:980px;margin:0 auto;display:flex;gap:12px;align-items:center;justify-content:space-between}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>header h1{margin:0;font-size:18px;font-weight:800;letter-spacing:.2px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>header button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 10px;border-radius:10px;cursor:pointer}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>main{max-width:980px;margin:0 auto;padding:16px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.card{background:#fff;border:1px solid var(--slate-200);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.04);padding:20px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.grid{display:grid;gap:16px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.grid-2{grid-template-columns:1fr 1fr}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;padding:12px 16px;cursor:pointer;font-weight:700}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-indigo{background:var(--indigo);color:#fff}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-indigo:hover{background:var(--indigo-700)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-ghost{background:#fff;border:1px solid var(--slate-300);color:var(--slate-700)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-ghost:hover{border-color:var(--indigo);color:var(--indigo)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-rose{background:var(--rose);color:#fff}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.btn-rose:hover{filter:brightness(.95)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.field{display:flex;flex-direction:column;gap:6px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.label{font-size:13px;color:var(--slate-600)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.input, .code{width:100%;padding:12px 12px;border:1px solid var(--slate-300);border-radius:10px;outline:none}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.input:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(79,70,229,.15)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.muted{color:var(--slate-600);font-size:14px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.hidden{display:none !important}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--slate-100);border-left:4px solid var(--indigo)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.item.first{background:#fff7ed;border-left-color:var(--amber)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.badge{background:var(--indigo);color:#fff;min-width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-weight:800}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.badge.first{background:var(--amber);color:#111}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.subtle{font-size:12px;color:var(--slate-600)}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.stack{display:flex;flex-direction:column;gap:16px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.stack-sm{gap:8px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.stack-lg{gap:24px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.buzzer{width:260px;height:260px;border-radius:999px;border:none;color:#fff;font-weight:900;letter-spacing:1px;font-size:28px;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>background:#10b981; /* emerald */</p>
+<p class="p1"><span class="Apple-converted-space">      </span>box-shadow:0 10px 0 #065f46; transition:transform .1s ease, box-shadow .1s ease, background .1s ease}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.buzzer:hover{box-shadow:0 6px 0 #065f46}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.buzzer:active{transform:translateY(10px);box-shadow:none;background:#047857}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.buzzer.disabled{background:#e2e8f0;color:#64748b;box-shadow:none;transform:none;cursor:not-allowed}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.alert{padding:10px;border-radius:10px;font-size:14px}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.alert-info{background:#eff6ff;color:#1e40af}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>.alert-error{background:#fef2f2;color:#b91c1c}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>@media (max-width:720px){ .grid-2{grid-template-columns:1fr;} header h1{font-size:16px} }</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/style&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;header&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="wrap"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;h1&gt;QuizBuzzer P2P&lt;/h1&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button id="exitBtn" class="hidden"&gt;Salir&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/header&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;main&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Landing --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;section id="view-landing" class="card center stack"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="stack-sm"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;h2 style="margin:0;font-size:28px"&gt;Sistema de Pulsadores&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;p class="muted"&gt;Elige tu rol para comenzar.&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="grid grid-2" style="width:100%"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;button id="btnHost" class="btn btn-ghost card center" style="padding:24px"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div style="font-size:18px;font-weight:800;color:var(--indigo)"&gt;Soy el Profesor&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="muted"&gt;Crear una sala y gestionar pulsadores&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;button id="btnClient" class="btn btn-ghost card center" style="padding:24px"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div style="font-size:18px;font-weight:800;color:#059669"&gt;Soy un Alumno&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="muted"&gt;Unirme a una sala y participar&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/section&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Host --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;section id="view-host" class="hidden stack-lg"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="card stack"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;h3 style="margin:0"&gt;Panel de Control del Profesor&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div id="hostStatus" class="muted"&gt;Iniciando red...&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div id="hostReady" class="hidden stack"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="field"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;label class="label"&gt;ID DE LA SALA (comparte con tus alumnos)&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div class="grid" style="grid-template-columns:1fr auto;gap:8px"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;input id="roomId" class="code" readonly /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">              </span>&lt;button id="copyBtn" class="btn btn-ghost"&gt;Copiar&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="subtle"&gt;&lt;span id="studentCount"&gt;0&lt;/span&gt; alumnos conectados&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="grid grid-2"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="card center stack"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;button id="resetBtn" class="btn btn-rose" style="width:100%;height:140px;font-size:24px"&gt;RESETEAR&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="subtle"&gt;Libera los pulsadores de los alumnos&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="card stack"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div style="display:flex;align-items:center;justify-content:space-between"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div style="font-weight:800"&gt;Orden de Respuesta&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;div id="buzzCountBadge" class="subtle"&gt;0 respuestas&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;ul id="buzzList" class="list"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;!-- Items renderizados dinámicamente --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/ul&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/section&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Client: connect --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;section id="view-client-connect" class="hidden"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="card stack"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="center stack-sm"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;h3 style="margin:0"&gt;Unirse a Clase&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;p class="muted"&gt;Introduce tus datos para entrar.&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="grid"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="field"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;label class="label"&gt;Tu Nombre&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;input id="studentName" class="input" placeholder="Ej: Ana García" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="field"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;label class="label"&gt;ID de Sala del Profesor&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;input id="hostIdInput" class="input" placeholder="Pega aquí el ID" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div id="clientConnectMsg" class="hidden alert"&gt;&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;button id="joinBtn" class="btn btn-indigo"&gt;Entrar a Clase&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/section&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;!-- Client: buzzer --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;section id="view-client-buzzer" class="hidden center stack"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;div class="card center stack"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div class="subtle"&gt;Conectado como&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;div id="youAre" style="font-weight:800"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="subtle"&gt;Esperando pregunta…&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button id="buzzerBtn" class="buzzer"&gt;PULSAR&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;div id="waitReset" class="hidden subtle"&gt;Espera a que el profesor resetee…&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/section&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/main&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>// --- Utils de navegación de vistas ---</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const views = {</p>
+<p class="p1"><span class="Apple-converted-space">      </span>landing: document.getElementById('view-landing'),</p>
+<p class="p1"><span class="Apple-converted-space">      </span>host: document.getElementById('view-host'),</p>
+<p class="p1"><span class="Apple-converted-space">      </span>clientConnect: document.getElementById('view-client-connect'),</p>
+<p class="p1"><span class="Apple-converted-space">      </span>clientBuzzer: document.getElementById('view-client-buzzer'),</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const exitBtn = document.getElementById('exitBtn');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>function show(view){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>Object.values(views).forEach(v=&gt;v.classList.add('hidden'));</p>
+<p class="p1"><span class="Apple-converted-space">      </span>view.classList.remove('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>exitBtn.classList.toggle('hidden', view===views.landing);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// --- Estado compartido ---</p>
+<p class="p1"><span class="Apple-converted-space">    </span>let hostPeer = null;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>let hostId = null;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const students = new Map(); // peerId -&gt; {name, conn}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>let buzzList = []; // [{id,name,time}]</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>let clientPeer = null;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>let clientConn = null;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>let clientName = "";</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// --- Landing handlers ---</p>
+<p class="p1"><span class="Apple-converted-space">    </span>document.getElementById('btnHost').onclick = startHost;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>document.getElementById('btnClient').onclick = ()=&gt;show(views.clientConnect);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>exitBtn.onclick = ()=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">      </span>try{ hostPeer &amp;&amp; hostPeer.destroy(); }catch(e){}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>try{ clientPeer &amp;&amp; clientPeer.destroy(); }catch(e){}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>// reset UI</p>
+<p class="p1"><span class="Apple-converted-space">      </span>resetHostUI(true);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>resetClientUI(true);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>show(views.landing);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// --- HOST LOGIC ---</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const hostStatus = document.getElementById('hostStatus');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const hostReady = document.getElementById('hostReady');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const roomIdEl = document.getElementById('roomId');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const studentCount = document.getElementById('studentCount');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const buzzListEl = document.getElementById('buzzList');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const buzzCountBadge = document.getElementById('buzzCountBadge');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const resetBtn = document.getElementById('resetBtn');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const copyBtn = document.getElementById('copyBtn');</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function startHost(){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>show(views.host);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>hostStatus.textContent = 'Cargando PeerJS…';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Si PeerJS ya está, iniciamos; si no, esperamos onload (pero viene por &lt;script&gt; ya cargado)</p>
+<p class="p1"><span class="Apple-converted-space">      </span>initHostPeer();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function randomId(){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>return Math.random().toString(36).substring(2,8).toUpperCase();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function initHostPeer(){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>try{</p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostStatus.textContent = 'Inicializando sala…';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostPeer = new Peer('quiz-host-' + randomId(), { debug: 1 });</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostPeer.on('open', (id)=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">          </span>hostId = id;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>roomIdEl.value = id;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>hostStatus.classList.add('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">          </span>hostReady.classList.remove('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">          </span>updateStudentCount();</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostPeer.on('connection', (conn)=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">          </span>// registro de data handlers</p>
+<p class="p1"><span class="Apple-converted-space">          </span>conn.on('data', (data)=&gt;onHostData(conn, data));</p>
+<p class="p1"><span class="Apple-converted-space">          </span>conn.on('close', ()=&gt;removeStudent(conn.peer));</p>
+<p class="p1"><span class="Apple-converted-space">          </span>conn.on('error', ()=&gt;removeStudent(conn.peer));</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostPeer.on('error', (err)=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">          </span>console.error(err);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>hostStatus.classList.remove('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">          </span>hostStatus.textContent = 'Error de red: ' + (err &amp;&amp; err.type ? err.type : 'desconocido');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}catch(e){</p>
+<p class="p1"><span class="Apple-converted-space">        </span>console.error(e);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostStatus.textContent = 'No se pudo iniciar la sala.';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function onHostData(conn, data){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if(!data || !data.type) return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>switch(data.type){</p>
+<p class="p1"><span class="Apple-converted-space">        </span>case 'JOIN': {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>students.set(conn.peer, { name: String(data.name||'Anónimo'), conn });</p>
+<p class="p1"><span class="Apple-converted-space">          </span>updateStudentCount();</p>
+<p class="p1"><span class="Apple-converted-space">          </span>break;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>case 'BUZZ': {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>// Evitar duplicados por alumno</p>
+<p class="p1"><span class="Apple-converted-space">          </span>if (buzzList.some(b=&gt;b.id===conn.peer)) return;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>const entry = { id: conn.peer, name: (students.get(conn.peer)?.name)||'Anónimo', time: Date.now() };</p>
+<p class="p1"><span class="Apple-converted-space">          </span>buzzList.push(entry);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>renderBuzzList();</p>
+<p class="p1"><span class="Apple-converted-space">          </span>break;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function removeStudent(peerId){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>students.delete(peerId);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>updateStudentCount();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Si estaba en la lista de buzz, lo quitamos visualmente (opcional)</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const before = buzzList.length;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>buzzList = buzzList.filter(b=&gt;b.id!==peerId);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (buzzList.length !== before) renderBuzzList();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function updateStudentCount(){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>studentCount.textContent = String(students.size);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function renderBuzzList(){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>buzzListEl.innerHTML = '';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>buzzList.forEach((b, idx)=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const li = document.createElement('li');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>li.className = 'item' + (idx===0 ? ' first' : '');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const badge = document.createElement('div');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>badge.className = 'badge' + (idx===0 ? ' first' : '');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>badge.textContent = String(idx+1);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>const nameSpan = document.createElement('div');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>nameSpan.style.fontWeight = '700';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>nameSpan.textContent = b.name;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (idx===0){</p>
+<p class="p1"><span class="Apple-converted-space">          </span>const first = document.createElement('div');</p>
+<p class="p1"><span class="Apple-converted-space">          </span>first.className = 'subtle';</p>
+<p class="p1"><span class="Apple-converted-space">          </span>first.style.marginLeft = 'auto';</p>
+<p class="p1"><span class="Apple-converted-space">          </span>first.textContent = '¡Primero!';</p>
+<p class="p1"><span class="Apple-converted-space">          </span>li.append(badge, nameSpan, first);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">          </span>li.append(badge, nameSpan);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>buzzListEl.appendChild(li);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>});</p>
+<p class="p1"><span class="Apple-converted-space">      </span>buzzCountBadge.textContent = buzzList.length + ' respuestas';</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function resetBuzzers(){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>buzzList = [];</p>
+<p class="p1"><span class="Apple-converted-space">      </span>renderBuzzList();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Enviar RESET a todos los alumnos conectados</p>
+<p class="p1"><span class="Apple-converted-space">      </span>students.forEach(s=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">        </span>try{ s.conn.open &amp;&amp; s.conn.send({ type:'RESET' }); }catch(e){}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>});</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function copyRoomId(){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const text = roomIdEl.value || '';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!text) return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>// Intento moderno</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (navigator.clipboard &amp;&amp; window.isSecureContext){</p>
+<p class="p1"><span class="Apple-converted-space">        </span>navigator.clipboard.writeText(text).then(()=&gt;alert('ID copiado')).catch(()=&gt;fallbackCopy(text));</p>
+<p class="p1"><span class="Apple-converted-space">      </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>fallbackCopy(text);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>function fallbackCopy(text){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const ta = document.createElement('textarea');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>ta.value = text; document.body.appendChild(ta); ta.select();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>try { document.execCommand('copy'); alert('ID copiado'); } catch(e){ alert('Copia manual: ' + text); }</p>
+<p class="p1"><span class="Apple-converted-space">      </span>document.body.removeChild(ta);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>resetBtn.onclick = resetBuzzers;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>copyBtn.onclick = copyRoomId;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function resetHostUI(full=false){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>buzzList = [];</p>
+<p class="p1"><span class="Apple-converted-space">      </span>renderBuzzList();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>students.clear();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>updateStudentCount();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (full){</p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostStatus.textContent = 'Iniciando red...';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostStatus.classList.remove('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostReady.classList.add('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>roomIdEl.value = '';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>try{ hostPeer &amp;&amp; hostPeer.destroy(); }catch(e){}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostPeer = null; hostId = null;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>// --- CLIENT LOGIC ---</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const studentNameEl = document.getElementById('studentName');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const hostIdInput = document.getElementById('hostIdInput');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const joinBtn = document.getElementById('joinBtn');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const clientConnectMsg = document.getElementById('clientConnectMsg');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const youAre = document.getElementById('youAre');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const buzzerBtn = document.getElementById('buzzerBtn');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>const waitReset = document.getElementById('waitReset');</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>joinBtn.onclick = ()=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">      </span>clientConnectMsg.classList.add('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>clientConnectMsg.className = 'hidden alert';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const name = (studentNameEl.value||'').trim();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>const host = (hostIdInput.value||'').trim();</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!name || !host){</p>
+<p class="p1"><span class="Apple-converted-space">        </span>showClientMsg('Por favor introduce tu nombre y el ID de sala.','info');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>clientName = name;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>startClient(host);</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function startClient(host){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>try{</p>
+<p class="p1"><span class="Apple-converted-space">        </span>showClientMsg('Conectando con el profesor…','info');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>clientPeer = new Peer({ debug:1 });</p>
+<p class="p1"><span class="Apple-converted-space">        </span>clientPeer.on('open', ()=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">          </span>clientConn = clientPeer.connect(host, { reliable:true });</p>
+<p class="p1"><span class="Apple-converted-space">          </span>clientConn.on('open', ()=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">            </span>showClientMsg('', ''); // limpiar</p>
+<p class="p1"><span class="Apple-converted-space">            </span>clientConn.send({ type:'JOIN', name: clientName });</p>
+<p class="p1"><span class="Apple-converted-space">            </span>youAre.textContent = clientName;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>show(views.clientBuzzer);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>setBuzzed(false);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>// Handlers</p>
+<p class="p1"><span class="Apple-converted-space">            </span>clientConn.on('data', (data)=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">              </span>if (data &amp;&amp; data.type==='RESET'){</p>
+<p class="p1"><span class="Apple-converted-space">                </span>setBuzzed(false);</p>
+<p class="p1"><span class="Apple-converted-space">                </span>if (navigator.vibrate) navigator.vibrate(100);</p>
+<p class="p1"><span class="Apple-converted-space">              </span>}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>});</p>
+<p class="p1"><span class="Apple-converted-space">            </span>clientConn.on('close', ()=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">              </span>alert('El profesor ha cerrado la sesión.');</p>
+<p class="p1"><span class="Apple-converted-space">              </span>resetClientUI(true);</p>
+<p class="p1"><span class="Apple-converted-space">              </span>show(views.clientConnect);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>});</p>
+<p class="p1"><span class="Apple-converted-space">            </span>clientConn.on('error', ()=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">              </span>showClientMsg('Error de conexión con el profesor. Verifica el ID.','error');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>});</p>
+<p class="p1"><span class="Apple-converted-space">          </span>});</p>
+<p class="p1"><span class="Apple-converted-space">          </span>clientConn.on('error', (err)=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">            </span>console.error(err);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>showClientMsg('No se pudo conectar al host. Verifica el ID.','error');</p>
+<p class="p1"><span class="Apple-converted-space">          </span>});</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p1"><span class="Apple-converted-space">        </span>clientPeer.on('error', (err)=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">          </span>console.error(err);</p>
+<p class="p1"><span class="Apple-converted-space">          </span>const msg = (err &amp;&amp; err.type==='peer-unavailable')</p>
+<p class="p1"><span class="Apple-converted-space">            </span>? 'Sala no encontrada. Verifica el ID.'</p>
+<p class="p1"><span class="Apple-converted-space">            </span>: ('Error: ' + (err?.type || 'desconocido'));</p>
+<p class="p1"><span class="Apple-converted-space">          </span>showClientMsg(msg,'error');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}catch(e){</p>
+<p class="p1"><span class="Apple-converted-space">        </span>console.error(e);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>showClientMsg('No se pudo iniciar el cliente.','error');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function setBuzzed(isBuzzed){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (isBuzzed){</p>
+<p class="p1"><span class="Apple-converted-space">        </span>buzzerBtn.classList.add('disabled');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>buzzerBtn.textContent = '¡PULSADO!';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>waitReset.classList.remove('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">        </span>buzzerBtn.classList.remove('disabled');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>buzzerBtn.textContent = 'PULSAR';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>waitReset.classList.add('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>buzzerBtn.onclick = ()=&gt;{</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!clientConn || buzzerBtn.classList.contains('disabled')) return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>try{</p>
+<p class="p1"><span class="Apple-converted-space">        </span>clientConn.send({ type:'BUZZ' });</p>
+<p class="p1"><span class="Apple-converted-space">        </span>setBuzzed(true);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>if (navigator.vibrate) navigator.vibrate([200]);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}catch(e){}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>};</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function showClientMsg(text, kind){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (!text){</p>
+<p class="p1"><span class="Apple-converted-space">        </span>clientConnectMsg.classList.add('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">        </span>return;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">      </span>clientConnectMsg.textContent = text;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>clientConnectMsg.classList.remove('hidden');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>clientConnectMsg.classList.remove('alert-info','alert-error');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (kind==='error') clientConnectMsg.classList.add('alert','alert-error');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>else clientConnectMsg.classList.add('alert','alert-info');</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>function resetClientUI(full=false){</p>
+<p class="p1"><span class="Apple-converted-space">      </span>setBuzzed(false);</p>
+<p class="p1"><span class="Apple-converted-space">      </span>showClientMsg('', '');</p>
+<p class="p1"><span class="Apple-converted-space">      </span>if (full){</p>
+<p class="p1"><span class="Apple-converted-space">        </span>try{ clientPeer &amp;&amp; clientPeer.destroy(); }catch(e){}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>clientPeer = null; clientConn = null; clientName = "";</p>
+<p class="p1"><span class="Apple-converted-space">        </span>studentNameEl.value = '';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>hostIdInput.value = '';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>youAre.textContent = '';</p>
+<p class="p1"><span class="Apple-converted-space">      </span>}</p>
+<p class="p1"><span class="Apple-converted-space">    </span>}</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/script&gt;</p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
+</body>
+</html>
