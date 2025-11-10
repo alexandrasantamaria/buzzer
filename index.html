@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>QuizBuzzer P2P (HTML/JS)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- PeerJS (CDN) -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    :root{
+      --indigo:#4f46e5; --indigo-700:#4338ca; --rose:#e11d48; --amber:#f59e0b;
+      --slate-900:#0f172a; --slate-800:#1e293b; --slate-700:#334155; --slate-600:#475569; --slate-500:#64748b; --slate-300:#cbd5e1; --slate-200:#e2e8f0; --slate-100:#f1f5f9; --white:#fff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:var(--slate-100);color:var(--slate-900)}
+    header{background:var(--indigo);color:#fff;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+    header .wrap{max-width:980px;margin:0 auto;display:flex;gap:12px;align-items:center;justify-content:space-between}
+    header h1{margin:0;font-size:18px;font-weight:800;letter-spacing:.2px}
+    header button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 10px;border-radius:10px;cursor:pointer}
+    main{max-width:980px;margin:0 auto;padding:16px}
+    .card{background:#fff;border:1px solid var(--slate-200);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.04);padding:20px}
+    .grid{display:grid;gap:16px}
+    .grid-2{grid-template-columns:1fr 1fr}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;padding:12px 16px;cursor:pointer;font-weight:700}
+    .btn-indigo{background:var(--indigo);color:#fff}
+    .btn-indigo:hover{background:var(--indigo-700)}
+    .btn-ghost{background:#fff;border:1px solid var(--slate-300);color:var(--slate-700)}
+    .btn-ghost:hover{border-color:var(--indigo);color:var(--indigo)}
+    .btn-rose{background:var(--rose);color:#fff}
+    .btn-rose:hover{filter:brightness(.95)}
+    .field{display:flex;flex-direction:column;gap:6px}
+    .label{font-size:13px;color:var(--slate-600)}
+    .input, .code{width:100%;padding:12px 12px;border:1px solid var(--slate-300);border-radius:10px;outline:none}
+    .input:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(79,70,229,.15)}
+    .muted{color:var(--slate-600);font-size:14px}
+    .center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+    .hidden{display:none !important}
+    .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+    .item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--slate-100);border-left:4px solid var(--indigo)}
+    .item.first{background:#fff7ed;border-left-color:var(--amber)}
+    .badge{background:var(--indigo);color:#fff;min-width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-weight:800}
+    .badge.first{background:var(--amber);color:#111}
+    .subtle{font-size:12px;color:var(--slate-600)}
+    .stack{display:flex;flex-direction:column;gap:16px}
+    .stack-sm{gap:8px}
+    .stack-lg{gap:24px}
+    .buzzer{width:260px;height:260px;border-radius:999px;border:none;color:#fff;font-weight:900;letter-spacing:1px;font-size:28px;
+      background:#10b981; /* emerald */
+      box-shadow:0 10px 0 #065f46; transition:transform .1s ease, box-shadow .1s ease, background .1s ease}
+    .buzzer:hover{box-shadow:0 6px 0 #065f46}
+    .buzzer:active{transform:translateY(10px);box-shadow:none;background:#047857}
+    .buzzer.disabled{background:#e2e8f0;color:#64748b;box-shadow:none;transform:none;cursor:not-allowed}
+    .alert{padding:10px;border-radius:10px;font-size:14px}
+    .alert-info{background:#eff6ff;color:#1e40af}
+    .alert-error{background:#fef2f2;color:#b91c1c}
+    @media (max-width:720px){ .grid-2{grid-template-columns:1fr;} header h1{font-size:16px} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>QuizBuzzer P2P</h1>
+      <button id="exitBtn" class="hidden">Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Landing -->
+    <section id="view-landing" class="card center stack">
+      <div class="stack-sm">
+        <h2 style="margin:0;font-size:28px">Sistema de Pulsadores</h2>
+        <p class="muted">Elige tu rol para comenzar.</p>
+      </div>
+      <div class="grid grid-2" style="width:100%">
+        <button id="btnHost" class="btn btn-ghost card center" style="padding:24px">
+          <div style="font-size:18px;font-weight:800;color:var(--indigo)">Soy el Profesor</div>
+          <div class="muted">Crear una sala y gestionar pulsadores</div>
+        </button>
+        <button id="btnClient" class="btn btn-ghost card center" style="padding:24px">
+          <div style="font-size:18px;font-weight:800;color:#059669">Soy un Alumno</div>
+          <div class="muted">Unirme a una sala y participar</div>
+        </button>
+      </div>
+    </section>
+
+    <!-- Host -->
+    <section id="view-host" class="hidden stack-lg">
+      <div class="card stack">
+        <h3 style="margin:0">Panel de Control del Profesor</h3>
+        <div id="hostStatus" class="muted">Iniciando red...</div>
+
+        <div id="hostReady" class="hidden stack">
+          <div class="field">
+            <label class="label">ID DE LA SALA (comparte con tus alumnos)</label>
+            <div class="grid" style="grid-template-columns:1fr auto;gap:8px">
+              <input id="roomId" class="code" readonly />
+              <button id="copyBtn" class="btn btn-ghost">Copiar</button>
+            </div>
+          </div>
+
+          <div class="subtle"><span id="studentCount">0</span> alumnos conectados</div>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="card center stack">
+          <button id="resetBtn" class="btn btn-rose" style="width:100%;height:140px;font-size:24px">RESETEAR</button>
+          <div class="subtle">Libera los pulsadores de los alumnos</div>
+        </div>
+
+        <div class="card stack">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-weight:800">Orden de Respuesta</div>
+            <div id="buzzCountBadge" class="subtle">0 respuestas</div>
+          </div>
+          <ul id="buzzList" class="list">
+            <!-- Items renderizados dinámicamente -->
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Client: connect -->
+    <section id="view-client-connect" class="hidden">
+      <div class="card stack">
+        <div class="center stack-sm">
+          <h3 style="margin:0">Unirse a Clase</h3>
+          <p class="muted">Introduce tus datos para entrar.</p>
+        </div>
+
+        <div class="grid">
+          <div class="field">
+            <label class="label">Tu Nombre</label>
+            <input id="studentName" class="input" placeholder="Ej: Ana García" />
+          </div>
+          <div class="field">
+            <label class="label">ID de Sala del Profesor</label>
+            <input id="hostIdInput" class="input" placeholder="Pega aquí el ID" />
+          </div>
+        </div>
+
+        <div id="clientConnectMsg" class="hidden alert"></div>
+
+        <button id="joinBtn" class="btn btn-indigo">Entrar a Clase</button>
+      </div>
+    </section>
+
+    <!-- Client: buzzer -->
+    <section id="view-client-buzzer" class="hidden center stack">
+      <div class="card center stack">
+        <div>
+          <div class="subtle">Conectado como</div>
+          <div id="youAre" style="font-weight:800"></div>
+        </div>
+        <div class="subtle">Esperando pregunta…</div>
+      </div>
+
+      <button id="buzzerBtn" class="buzzer">PULSAR</button>
+      <div id="waitReset" class="hidden subtle">Espera a que el profesor resetee…</div>
+    </section>
+  </main>
+
+  <script>
+    // --- Utils de navegación de vistas ---
+    const views = {
+      landing: document.getElementById('view-landing'),
+      host: document.getElementById('view-host'),
+      clientConnect: document.getElementById('view-client-connect'),
+      clientBuzzer: document.getElementById('view-client-buzzer'),
+    };
+    const exitBtn = document.getElementById('exitBtn');
+    function show(view){
+      Object.values(views).forEach(v=>v.classList.add('hidden'));
+      view.classList.remove('hidden');
+      exitBtn.classList.toggle('hidden', view===views.landing);
+    }
+
+    // --- Estado compartido ---
+    let hostPeer = null;
+    let hostId = null;
+    const students = new Map(); // peerId -> {name, conn}
+    let buzzList = []; // [{id,name,time}]
+
+    let clientPeer = null;
+    let clientConn = null;
+    let clientName = "";
+
+    // --- Landing handlers ---
+    document.getElementById('btnHost').onclick = startHost;
+    document.getElementById('btnClient').onclick = ()=>show(views.clientConnect);
+    exitBtn.onclick = ()=>{
+      try{ hostPeer && hostPeer.destroy(); }catch(e){}
+      try{ clientPeer && clientPeer.destroy(); }catch(e){}
+      // reset UI
+      resetHostUI(true);
+      resetClientUI(true);
+      show(views.landing);
+    };
+
+    // --- HOST LOGIC ---
+    const hostStatus = document.getElementById('hostStatus');
+    const hostReady = document.getElementById('hostReady');
+    const roomIdEl = document.getElementById('roomId');
+    const studentCount = document.getElementById('studentCount');
+    const buzzListEl = document.getElementById('buzzList');
+    const buzzCountBadge = document.getElementById('buzzCountBadge');
+    const resetBtn = document.getElementById('resetBtn');
+    const copyBtn = document.getElementById('copyBtn');
+
+    function startHost(){
+      show(views.host);
+      hostStatus.textContent = 'Cargando PeerJS…';
+      // Si PeerJS ya está, iniciamos; si no, esperamos onload (pero viene por <script> ya cargado)
+      initHostPeer();
+    }
+
+    function randomId(){
+      return Math.random().toString(36).substring(2,8).toUpperCase();
+    }
+
+    function initHostPeer(){
+      try{
+        hostStatus.textContent = 'Inicializando sala…';
+        hostPeer = new Peer('quiz-host-' + randomId(), { debug: 1 });
+
+        hostPeer.on('open', (id)=>{
+          hostId = id;
+          roomIdEl.value = id;
+          hostStatus.classList.add('hidden');
+          hostReady.classList.remove('hidden');
+          updateStudentCount();
+        });
+
+        hostPeer.on('connection', (conn)=>{
+          // registro de data handlers
+          conn.on('data', (data)=>onHostData(conn, data));
+          conn.on('close', ()=>removeStudent(conn.peer));
+          conn.on('error', ()=>removeStudent(conn.peer));
+        });
+
+        hostPeer.on('error', (err)=>{
+          console.error(err);
+          hostStatus.classList.remove('hidden');
+          hostStatus.textContent = 'Error de red: ' + (err && err.type ? err.type : 'desconocido');
+        });
+      }catch(e){
+        console.error(e);
+        hostStatus.textContent = 'No se pudo iniciar la sala.';
+      }
+    }
+
+    function onHostData(conn, data){
+      if(!data || !data.type) return;
+      switch(data.type){
+        case 'JOIN': {
+          students.set(conn.peer, { name: String(data.name||'Anónimo'), conn });
+          updateStudentCount();
+          break;
+        }
+        case 'BUZZ': {
+          // Evitar duplicados por alumno
+          if (buzzList.some(b=>b.id===conn.peer)) return;
+          const entry = { id: conn.peer, name: (students.get(conn.peer)?.name)||'Anónimo', time: Date.now() };
+          buzzList.push(entry);
+          renderBuzzList();
+          break;
+        }
+      }
+    }
+
+    function removeStudent(peerId){
+      students.delete(peerId);
+      updateStudentCount();
+      // Si estaba en la lista de buzz, lo quitamos visualmente (opcional)
+      const before = buzzList.length;
+      buzzList = buzzList.filter(b=>b.id!==peerId);
+      if (buzzList.length !== before) renderBuzzList();
+    }
+
+    function updateStudentCount(){
+      studentCount.textContent = String(students.size);
+    }
+
+    function renderBuzzList(){
+      buzzListEl.innerHTML = '';
+      buzzList.forEach((b, idx)=>{
+        const li = document.createElement('li');
+        li.className = 'item' + (idx===0 ? ' first' : '');
+        const badge = document.createElement('div');
+        badge.className = 'badge' + (idx===0 ? ' first' : '');
+        badge.textContent = String(idx+1);
+        const nameSpan = document.createElement('div');
+        nameSpan.style.fontWeight = '700';
+        nameSpan.textContent = b.name;
+        if (idx===0){
+          const first = document.createElement('div');
+          first.className = 'subtle';
+          first.style.marginLeft = 'auto';
+          first.textContent = '¡Primero!';
+          li.append(badge, nameSpan, first);
+        } else {
+          li.append(badge, nameSpan);
+        }
+        buzzListEl.appendChild(li);
+      });
+      buzzCountBadge.textContent = buzzList.length + ' respuestas';
+    }
+
+    function resetBuzzers(){
+      buzzList = [];
+      renderBuzzList();
+      // Enviar RESET a todos los alumnos conectados
+      students.forEach(s=>{
+        try{ s.conn.open && s.conn.send({ type:'RESET' }); }catch(e){}
+      });
+    }
+
+    function copyRoomId(){
+      const text = roomIdEl.value || '';
+      if (!text) return;
+      // Intento moderno
+      if (navigator.clipboard && window.isSecureContext){
+        navigator.clipboard.writeText(text).then(()=>alert('ID copiado')).catch(()=>fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+    function fallbackCopy(text){
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); alert('ID copiado'); } catch(e){ alert('Copia manual: ' + text); }
+      document.body.removeChild(ta);
+    }
+
+    resetBtn.onclick = resetBuzzers;
+    copyBtn.onclick = copyRoomId;
+
+    function resetHostUI(full=false){
+      buzzList = [];
+      renderBuzzList();
+      students.clear();
+      updateStudentCount();
+      if (full){
+        hostStatus.textContent = 'Iniciando red...';
+        hostStatus.classList.remove('hidden');
+        hostReady.classList.add('hidden');
+        roomIdEl.value = '';
+        try{ hostPeer && hostPeer.destroy(); }catch(e){}
+        hostPeer = null; hostId = null;
+      }
+    }
+
+    // --- CLIENT LOGIC ---
+    const studentNameEl = document.getElementById('studentName');
+    const hostIdInput = document.getElementById('hostIdInput');
+    const joinBtn = document.getElementById('joinBtn');
+    const clientConnectMsg = document.getElementById('clientConnectMsg');
+    const youAre = document.getElementById('youAre');
+    const buzzerBtn = document.getElementById('buzzerBtn');
+    const waitReset = document.getElementById('waitReset');
+
+    joinBtn.onclick = ()=>{
+      clientConnectMsg.classList.add('hidden');
+      clientConnectMsg.className = 'hidden alert';
+      const name = (studentNameEl.value||'').trim();
+      const host = (hostIdInput.value||'').trim();
+      if (!name || !host){
+        showClientMsg('Por favor introduce tu nombre y el ID de sala.','info');
+        return;
+      }
+      clientName = name;
+      startClient(host);
+    };
+
+    function startClient(host){
+      try{
+        showClientMsg('Conectando con el profesor…','info');
+        clientPeer = new Peer({ debug:1 });
+        clientPeer.on('open', ()=>{
+          clientConn = clientPeer.connect(host, { reliable:true });
+          clientConn.on('open', ()=>{
+            showClientMsg('', ''); // limpiar
+            clientConn.send({ type:'JOIN', name: clientName });
+            youAre.textContent = clientName;
+            show(views.clientBuzzer);
+            setBuzzed(false);
+            // Handlers
+            clientConn.on('data', (data)=>{
+              if (data && data.type==='RESET'){
+                setBuzzed(false);
+                if (navigator.vibrate) navigator.vibrate(100);
+              }
+            });
+            clientConn.on('close', ()=>{
+              alert('El profesor ha cerrado la sesión.');
+              resetClientUI(true);
+              show(views.clientConnect);
+            });
+            clientConn.on('error', ()=>{
+              showClientMsg('Error de conexión con el profesor. Verifica el ID.','error');
+            });
+          });
+          clientConn.on('error', (err)=>{
+            console.error(err);
+            showClientMsg('No se pudo conectar al host. Verifica el ID.','error');
+          });
+        });
+        clientPeer.on('error', (err)=>{
+          console.error(err);
+          const msg = (err && err.type==='peer-unavailable')
+            ? 'Sala no encontrada. Verifica el ID.'
+            : ('Error: ' + (err?.type || 'desconocido'));
+          showClientMsg(msg,'error');
+        });
+      }catch(e){
+        console.error(e);
+        showClientMsg('No se pudo iniciar el cliente.','error');
+      }
+    }
+
+    function setBuzzed(isBuzzed){
+      if (isBuzzed){
+        buzzerBtn.classList.add('disabled');
+        buzzerBtn.textContent = '¡PULSADO!';
+        waitReset.classList.remove('hidden');
+      } else {
+        buzzerBtn.classList.remove('disabled');
+        buzzerBtn.textContent = 'PULSAR';
+        waitReset.classList.add('hidden');
+      }
+    }
+
+    buzzerBtn.onclick = ()=>{
+      if (!clientConn || buzzerBtn.classList.contains('disabled')) return;
+      try{
+        clientConn.send({ type:'BUZZ' });
+        setBuzzed(true);
+        if (navigator.vibrate) navigator.vibrate([200]);
+      }catch(e){}
+    };
+
+    function showClientMsg(text, kind){
+      if (!text){
+        clientConnectMsg.classList.add('hidden');
+        return;
+      }
+      clientConnectMsg.textContent = text;
+      clientConnectMsg.classList.remove('hidden');
+      clientConnectMsg.classList.remove('alert-info','alert-error');
+      if (kind==='error') clientConnectMsg.classList.add('alert','alert-error');
+      else clientConnectMsg.classList.add('alert','alert-info');
+    }
+
+    function resetClientUI(full=false){
+      setBuzzed(false);
+      showClientMsg('', '');
+      if (full){
+        try{ clientPeer && clientPeer.destroy(); }catch(e){}
+        clientPeer = null; clientConn = null; clientName = "";
+        studentNameEl.value = '';
+        hostIdInput.value = '';
+        youAre.textContent = '';
+      }
+    }
+  </script>
+</body>
+</html>
