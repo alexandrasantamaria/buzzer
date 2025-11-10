@@ -1,592 +1,368 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <title>QuizBuzzer P2P (HTML/JS)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <style>
-    :root{
-      --indigo:#4f46e5; --indigo-700:#4338ca; --rose:#e11d48; --amber:#f59e0b; --emerald:#10b981;
-      --slate-900:#0f172a; --slate-800:#1e293b; --slate-700:#334155; --slate-600:#475569; --slate-500:#64748b;
-      --slate-300:#cbd5e1; --slate-200:#e2e8f0; --slate-100:#f1f5f9;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;background:var(--slate-100);color:var(--slate-900)}
-    header{background:var(--indigo);color:#fff;padding:12px 16px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-    header .wrap{max-width:1100px;margin:0 auto;display:flex;gap:12px;align-items:center;justify-content:space-between}
-    header h1{margin:0;font-size:18px;font-weight:800}
-    header button{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 10px;border-radius:10px;cursor:pointer}
-    main{max-width:1100px;margin:0 auto;padding:16px}
-    .card{background:#fff;border:1px solid var(--slate-200);border-radius:14px;box-shadow:0 1px 4px rgba(0,0,0,.04);padding:20px}
-    .grid{display:grid;gap:16px}
-    .grid-2{grid-template-columns:1fr 1fr} .grid-3{grid-template-columns:1.1fr 1fr .9fr}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:700}
-    .btn-indigo{background:var(--indigo);color:#fff}.btn-indigo:hover{background:var(--indigo-700)}
-    .btn-ghost{background:#fff;border:1px solid var(--slate-300);color:var(--slate-700)} .btn-ghost:hover{border-color:var(--indigo);color:var(--indigo)}
-    .btn-rose{background:var(--rose);color:#fff} .btn-rose:hover{filter:brightness(.95)}
-    .btn-emerald{background:var(--emerald);color:#fff}
-    .field{display:flex;flex-direction:column;gap:6px}
-    .label{font-size:13px;color:var(--slate-600)}
-    .input,.code{width:100%;padding:10px 12px;border:1px solid var(--slate-300);border-radius:10px;outline:none}
-    .input:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(79,70,229,.15)}
-    .muted{color:var(--slate-600);font-size:14px}
-    .subtle{font-size:12px;color:var(--slate-600)}
-    .center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-    .hidden{display:none !important}
-    .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-    .item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;background:var(--slate-100);border-left:4px solid var(--indigo)}
-    .item.first{background:#fff7ed;border-left-color:var(--amber)}
-    .badge{background:var(--indigo);color:#fff;min-width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-weight:800}
-    .badge.first{background:var(--amber);color:#111}
-    .score-list li{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid var(--slate-200);border-radius:10px;background:#fff}
-    .buzzer{width:260px;height:260px;border-radius:999px;border:none;color:#fff;font-weight:900;letter-spacing:1px;font-size:28px;
-      background:var(--emerald); box-shadow:0 10px 0 #065f46; transition:transform .1s ease, box-shadow .1s ease, background .1s ease}
-    .buzzer:hover{box-shadow:0 6px 0 #065f46}
-    .buzzer:active{transform:translateY(10px);box-shadow:none;background:#047857}
-    .buzzer.disabled{background:#e2e8f0;color:#64748b;box-shadow:none;transform:none;cursor:not-allowed}
-    .timer{font-variant-numeric:tabular-nums;font-weight:800}
-    @media (max-width:960px){ .grid-3{grid-template-columns:1fr} .grid-2{grid-template-columns:1fr} header h1{font-size:16px}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizBuzzer P2P</title>
+    
+    <!-- 1. Cargar Estilos (Tailwind CSS) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Cargar Librerías Nucleares (React, ReactDOM, PeerJS) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <!-- 3. Cargar Babel (para traducir JSX en el navegador) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 4. Cargar Iconos (Lucide React UMD) -->
+    <script src="https://unpkg.com/lucide-react/dist/lucide-react.umd.js"></script>
+
+    <style>
+        /* Ajustes básicos para evitar saltos de carga */
+        body { background-color: #f8fafc; }
+    </style>
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <h1>QuizBuzzer P2P</h1>
-      <button id="exitBtn" class="hidden">Salir</button>
-    </div>
-  </header>
+    <!-- Contenedor principal donde React montará la app -->
+    <div id="root"></div>
 
-  <main>
-        <section id="view-landing" class="card center grid" style="gap:24px">
-      <div class="center" style="gap:6px">
-        <h2 style="margin:0;font-size:28px">Sistema de Pulsadores</h2>
-        <p class="muted" style="margin:0">Elige tu rol para comenzar.</p>
-      </div>
-      <div class="grid grid-2" style="width:100%">
-        <button id="btnHost" class="btn btn-ghost card center" style="padding:24px">
-          <div style="font-size:18px;font-weight:800;color:var(--indigo)">Soy el Profesor</div>
-          <div class="muted">Crear una sala y gestionar pulsadores</div>
-        </button>
-        <button id="btnClient" class="btn btn-ghost card center" style="padding:24px">
-          <div style="font-size:18px;font-weight:800;color:#059669">Soy un Alumno</div>
-          <div class="muted">Unirme a una sala y participar</div>
-        </button>
-      </div>
-    </section>
+    <!-- Tu aplicación React -->
+    <script type="text/babel">
+        // Extraemos los hooks de React del objeto global
+        const { useState, useEffect, useRef } = React;
+        
+        // Extraemos los iconos de la librería lucideReact cargada globalmente
+        const { Gavel, Users, RotateCcw, CheckCircle2, Loader2 } = lucideReact;
 
-        <section id="view-host" class="hidden grid grid-3">
-            <div class="card" style="display:flex;flex-direction:column;gap:14px">
-        <h3 style="margin:0">Panel del Profesor</h3>
-        <div id="hostStatus" class="muted">Iniciando red...</div>
-        <div id="hostReady" class="hidden" style="display:flex;flex-direction:column;gap:12px">
-          <div class="grid" style="grid-template-columns:1fr auto;gap:8px">
-            <div class="field">
-              <label class="label">ID DE LA SALA</label>
-              <input id="roomId" class="code" readonly />
-            </div>
-            <div style="display:flex;gap:8px;align-items:flex-end">
-      _       <button id="copyBtn" class="btn btn-ghost">Copiar</button>
-              <button id="showQRBtn" class="btn btn-ghost">QR</button>
-            </div>
-          </div>
-          <div class="subtle"><span id="studentCount">0</span> alumnos conectados</div>
-        </div>
+        // Componente principal
+        function App() {
+            const [mode, setMode] = useState('landing');
 
-        <div class="card" style="display:flex;flex-direction:column;gap:12px">
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-            <div class="field" style="width:140px">
-              <label class="label">Tiempo (seg.)</label>
-              <input id="timerSeconds" class="input" type="number" min="5" step="5" value="30">
-            </div>
-            <button id="timerStartBtn" class="btn btn-emerald">Iniciar pregunta</button>
-            <button id="timerStopBtn" class="btn btn-ghost">Detener</button>
-            <button id="resetBtn" class="btn btn-rose">RESET</button>
-            <div class="muted">Estado: <span id="lockState">desbloqueado</span></div>
-            <div class="timer" id="timerLabel" style="margin-left:auto;font-size:20px">00:00</div>
-          </div>
-          <div class="subtle">Al iniciar pregunta se desbloquean los alumnos y empieza la cuenta atrás. Al llegar a 0 se bloquea automáticamente.</div>
-        </div>
-      </div>
+            return (
+                <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+                    <header className="bg-indigo-600 text-white p-4 shadow-md">
+                        <div className="container mx-auto flex items-center justify-between">
+                            <h1 className="text-xl font-bold flex items-center gap-2">
+                                <Gavel size={24} />
+                                QuizBuzzer P2P
+                            </h1>
+                            {mode !== 'landing' && (
+                                <button 
+                                    onClick={() => setMode('landing')}
+                                    className="text-sm bg-indigo-700 hover:bg-indigo-800 px-3 py-1 rounded transition"
+                                >
+                                    Salir
+                                </button>
+                            )}
+                        </div>
+                    </header>
 
-            <div class="card" style="display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div style="font-weight:800">Orden de Respuesta</div>
-          <div id="buzzCountBadge" class="subtle">0 respuestas</div>
-        </div>
-        <ul id="buzzList" class="list"></ul>
-      </div>
+                    <main className="container mx-auto p-4">
+                        {mode === 'landing' && <Landing onSetMode={setMode} />}
+                        {mode === 'host' && <HostView />}
+                        {mode === 'client' && <ClientView />}
+                    </main>
+                </div>
+            );
+        }
 
-            <div class="card" style="display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:800">Marcador</div>
-          <button id="clearScoresBtn" class="btn btn-ghost">Poner a 0</button>
-        </div>
-        <ul id="scoreList" class="score-list list"></ul>
-      </div>
-    </section>
+        // Vista de Bienvenida
+        function Landing({ onSetMode }) {
+            return (
+                <div className="flex flex-col items-center justify-center py-12 space-y-8 max-w-md mx-auto">
+                    <div className="text-center space-y-2">
+                        <h2 className="text-3xl font-bold text-indigo-900">Sistema de Pulsadores</h2>
+                        <p className="text-slate-600">Elige tu rol para comenzar la sesión.</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 w-full gap-4">
+                        <button
+                            onClick={() => onSetMode('host')}
+                            className="flex flex-col items-center p-6 bg-white border-2 border-indigo-100 rounded-xl shadow-sm hover:border-indigo-500 hover:shadow-md transition group"
+                        >
+                            <div className="bg-indigo-100 p-4 rounded-full mb-4 group-hover:bg-indigo-200 transition">
+                                <Users className="text-indigo-600" size={32} />
+                            </div>
+                            <span className="text-xl font-semibold text-indigo-900">Soy el Profesor</span>
+                            <span className="text-sm text-slate-500 mt-2">Crear sala y gestionar</span>
+                        </button>
 
-        <div id="qrModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center">
-      <div class="card" style="padding:24px;display:flex;flex-direction:column;gap:12px;align-items:center">
-        <div id="qrContainer"></div>
-        <div class="muted" id="qrText"></div>
-        <button id="closeQR" class="btn btn-ghost">Cerrar</button>
-      </div>
-    </div>
+                        <button
+                            onClick={() => onSetMode('client')}
+                            className="flex flex-col items-center p-6 bg-white border-2 border-emerald-100 rounded-xl shadow-sm hover:border-emerald-500 hover:shadow-md transition group"
+                        >
+                            <div className="bg-emerald-100 p-4 rounded-full mb-4 group-hover:bg-emerald-200 transition">
+                                <Gavel className="text-emerald-600" size={32} />
+                            </div>
+                            <span className="text-xl font-semibold text-emerald-900">Soy un Alumno</span>
+                            <span className="text-sm text-slate-500 mt-2">Unirme y participar</span>
+                        </button>
+                    </div>
+                </div>
+            );
+        }
 
-        <section id="view-client-connect" class="hidden">
-      <div class="card" style="display:flex;flex-direction:column;gap:14px">
-        <div class="center" style="gap:6px">
-          <h3 style="margin:0">Unirse a Clase</h3>
-          <p class="muted">Introduce tus datos para entrar.</p>
-        </div>
-        <div class="grid">
-          <div class="field">
-            <label class="label">Tu Nombre</label>
-            <input id="studentName" class="input" placeholder="Ej: Ana García" />
-          </div>
-          <div class="field">
-            <label class="label">ID de Sala del Profesor</label>
-            <input id="hostIdInput" class="input" placeholder="Pega aquí el ID" />
-          </div>
-        </div>
-        <div id="clientConnectMsg" class="hidden alert"></div>
-        <button id="joinBtn" class="btn btn-indigo">Entrar a Clase</button>
-      </div>
-    </section>
+        // Vista del Profesor
+        function HostView() {
+            const [peerId, setPeerId] = useState(null);
+            const [students, setStudents] = useState({});
+            const [buzzList, setBuzzList] = useState([]);
+            const [status, setStatus] = useState('Iniciando red...');
+            const peerRef = useRef(null);
 
-        <section id="view-client-buzzer" class="hidden center" style="gap:16px">
-      <div class="card center" style="gap:6px">
-        <div class="subtle">Conectado como</div>
-        <div id="youAre" style="font-weight:800"></div>
-        <div class="muted">Estado: <span id="clientLockState">bloqueado</span> · Tiempo: <span id="clientTimer" class="timer">--:--</span></div>
-      </div>
-      <button id="buzzerBtn" class="buzzer disabled" disabled>PULSAR</button>
-      <div id="waitReset" class="hidden subtle">Espera a que el profesor resetee…</div>
-      <div id="myScore" class="subtle">Tu puntuación: 0</div>
-    </section>
-  </main>
+            useEffect(() => {
+                // Generar ID aleatorio corto para facilitar compartir
+                const shortId = Math.random().toString(36).substring(2, 8).toUpperCase();
+                const peer = new window.Peer('quiz-host-' + shortId, { debug: 1 });
 
-  <script>
-    // ========= Utilidades =========
-    const views = {
-      landing: document.getElementById('view-landing'),
-      host: document.getElementById('view-host'),
-      clientConnect: document.getElementById('view-client-connect'),
-      clientBuzzer: document.getElementById('view-client-buzzer'),
-    };
-    const exitBtn = document.getElementById('exitBtn');
-    function show(view){
-      Object.values(views).forEach(v=>v.classList.add('hidden'));
-      view.classList.remove('hidden');
-      exitBtn.classList.toggle('hidden', view===views.landing);
-    }
-    const fmt = (s)=> String(s).padStart(2,'0');
-    const secToMMSS = (secs)=>${fmt(Math.max(0,Math.floor(secs/60)))}:${fmt(Math.max(0,Math.floor(secs%60)))};
+                peer.on('open', (id) => {
+                    setPeerId(id);
+                    setStatus('Sala lista. Esperando alumnos...');
+                });
 
-    // Sonidos sencillos con WebAudio (sin archivos)
-    let audioCtx;
-    function beep(freq=880, timeMs=150){
-      try{
-        audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = 'sine'; o.frequency.value = freq;
-        g.gain.value = 0.04;
-        o.connect(g); g.connect(audioCtx.destination);
-        o.start();
-        setTimeout(()=>{ o.stop(); }, timeMs);
-      }catch(e){}
-    }
-    function chordOK(){ beep(1046,120); setTimeout(()=>beep(1318,120),120); }
-    function chordReset(){ beep(392,120); setTimeout(()=>beep(392,120),140); }
+                peer.on('connection', (conn) => {
+                    conn.on('data', (data) => {
+                        if (data.type === 'JOIN') {
+                            setStudents(prev => ({ ...prev, [conn.peer]: { name: data.name, conn: conn } }));
+                        } else if (data.type === 'BUZZ') {
+                            setBuzzList(prev => {
+                                if (prev.some(item => item.id === conn.peer)) return prev;
+                                return [...prev, { id: conn.peer, name: students[conn.peer]?.name || 'Anónimo', time: Date.now() }];
+                            });
+                        }
+                    });
+                    conn.on('close', () => removeStudent(conn.peer));
+                    conn.on('error', () => removeStudent(conn.peer));
+                });
 
-    // ========= Estado común =========
-    let hostPeer=null, hostId=null, locked=true, timerInt=null, timerEnd=0;
-    const students = new Map(); // peerId -> {name, conn}
-    let buzzList = [];          // [{id,name,time}]
-    const scores = new Map();   // peerId -> number
+                peer.on('error', (err) => {
+                    console.error("Peer error:", err);
+                    if (err.type === 'unavailable-id') {
+                         setStatus('Error: ID ocupado, recarga la página.');
+                    } else {
+                         setStatus(`Error de red: ${err.type}`);
+                    }
+                });
 
-    let clientPeer=null, clientConn=null, clientName="", myScore=0, clientLocked=true, clientTimerInt=null, clientTimerEnd=0;
+                peerRef.current = peer;
+                return () => peer.destroy();
+            }, []);
 
-    // ========= Landing =========
-    document.getElementById('btnHost').onclick = startHost;
-    document.getElementById('btnClient').onclick = ()=>show(views.clientConnect);
-    exitBtn.onclick = ()=>{
-      try{ hostPeer && hostPeer.destroy(); }catch(e){}
-      try{ clientPeer && clientPeer.destroy(); }catch(e){}
-      location.reload();
-    };
+            const removeStudent = (id) => {
+                setStudents(prev => {
+                    const newState = { ...prev };
+                    delete newState[id];
+                    return newState;
+                });
+            };
 
-    // ========= HOST =========
-    const hostStatus = document.getElementById('hostStatus');
-    const hostReady = document.getElementById('hostReady');
-    const roomIdEl = document.getElementById('roomId');
-    const studentCount = document.getElementById('studentCount');
-    const buzzListEl = document.getElementById('buzzList');
-    const buzzCountBadge = document.getElementById('buzzCountBadge');
-    const resetBtn = document.getElementById('resetBtn');
-    const copyBtn = document.getElementById('copyBtn');
-    const lockState = document.getElementById('lockState');
-    const timerLabel = document.getElementById('timerLabel');
-    const timerSeconds = document.getElementById('timerSeconds');
-    const timerStartBtn = document.getElementById('timerStartBtn');
-    const timerStopBtn = document.getElementById('timerStopBtn');
+            const resetBuzzers = () => {
+                setBuzzList([]);
+                Object.values(students).forEach(s => {
+                    if (s.conn && s.conn.open) s.conn.send({ type: 'RESET' });
+                });
+            };
 
-    const scoreList = document.getElementById('scoreList');
-    const clearScoresBtn = document.getElementById('clearScoresBtn');
+            const copyToClipboard = () => {
+                navigator.clipboard.writeText(peerId);
+                alert("ID copiado al portapapeles");
+            };
 
-    const showQRBtn = document.getElementById('showQRBtn');
-    const qrModal = document.getElementById('qrModal');
-    const qrContainer = document.getElementById('qrContainer');
-    const qrText = document.getElementById('qrText');
-    const closeQR = document.getElementById('closeQR');
+            return (
+                <div className="max-w-2xl mx-auto space-y-6">
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h2 className="text-xl font-bold text-indigo-900 mb-4">Panel de Control del Profesor</h2>
+                        {!peerId ? (
+                            <div className="flex items-center gap-3 text-slate-600 animate-pulse">
+                                <Loader2 className="animate-spin" />
+                                <span>{status}</span>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-500">ID DE LA SALA (Comparte esto)</label>
+                                    <div className="flex gap-2 mt-1">
+                                        <code className="flex-1 bg-slate-100 p-3 rounded-lg text-lg font-mono font-bold border border-slate-300 select-all">
+                                            {peerId}
+                                        </code>
+                                        <button onClick={copyToClipboard} className="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg font-medium hover:bg-indigo-200 transition">
+                                            Copiar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                    <Users size={18} />
+                                    <span>{Object.keys(students).length} alumnos conectados</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
-    function randomId(){ return Math.random().toString(36).substring(2,8).toUpperCase(); }
+                    <div className="grid md:grid-cols-5 gap-6">
+                        <div className="md:col-span-2">
+                            <button
+                                onClick={resetBuzzers}
+                                disabled={!peerId}
+                                className="w-full h-full min-h-[150px] flex flex-col items-center justify-center gap-3 bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 text-white rounded-xl shadow-lg transition transform active:scale-95"
+                            >
+                                <RotateCcw size={48} />
+                                <span className="text-2xl font-bold">RESETEAR</span>
+                            </button>
+                        </div>
+                        <div className="md:col-span-3 bg-white p-6 rounded-xl shadow-sm border border-slate-200 min-h-[300px]">
+                            <h3 className="text-lg font-bold text-slate-800 mb-4 flex justify-between items-center">
+                                <span>Orden de Respuesta</span>
+                                {buzzList.length > 0 && <span className="text-sm bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">{buzzList.length}</span>}
+                            </h3>
+                            {buzzList.length === 0 ? (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2">
+                                    <Gavel size={48} className="opacity-20" />
+                                    <p>Esperando pulsaciones...</p>
+                                </div>
+                            ) : (
+                                <ul className="space-y-2">
+                                    {buzzList.map((buzz, index) => (
+                                        <li key={buzz.id} className={`p-3 rounded-lg flex items-center gap-3 border-l-4 animate-in slide-in-from-left ${index === 0 ? 'bg-amber-50 border-amber-500' : 'bg-slate-50 border-indigo-400'}`}>
+                                            <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold ${index === 0 ? 'bg-amber-500 text-white' : 'bg-indigo-100 text-indigo-700'}`}>
+                                                {index + 1}
+                                            </div>
+                                            <span className="font-semibold text-lg text-slate-800 truncate">{buzz.name}</span>
+                                            {index === 0 && <span className="ml-auto text-xs font-bold text-amber-600 uppercase tracking-wider">¡Primero!</span>}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
 
-    function startHost(){
-      show(views.host);
-      hostStatus.textContent = 'Inicializando sala…';
-      initHostPeer();
-    }
+        // Vista del Alumno
+        function ClientView() {
+            const [step, setStep] = useState('connect');
+            const [hostId, setHostId] = useState('');
+            const [myName, setMyName] = useState('');
+            const [status, setStatus] = useState('');
+            const [isBuzzed, setIsBuzzed] = useState(false);
+            const [conn, setConn] = useState(null);
+            const peerRef = useRef(null);
 
-    function setLocked(v){
-      locked = v;
-      lockState.textContent = locked ? 'bloqueado' : 'desbloqueado';
-    }
+            useEffect(() => {
+                return () => { if (peerRef.current) peerRef.current.destroy(); };
+            }, []);
 
-    function broadcast(msg){
-      students.forEach(s=>{ try{ s.conn.open && s.conn.send(msg); }catch(e){} });
-    }
+            const joinSession = () => {
+                if (!myName.trim() || !hostId.trim()) {
+                    setStatus('Por favor introduce tu nombre y el ID de sala.');
+                    return;
+                }
+                setStatus('Conectando con el profesor...');
+                const peer = new window.Peer({ debug: 1 });
+                peerRef.current = peer;
 
-    function initHostPeer(){
-      try{
-        hostPeer = new Peer('quiz-host-' + randomId(), { debug: 1 });
-        hostPeer.on('open', (id)=>{
-          hostId = id;
-          roomIdEl.value = id;
-          hostStatus.classList.add('hidden');
-          hostReady.classList.remove('hidden');
-          updateStudentCount();
-          setLocked(true);
-          updateTimerLabel(0);
-        });
-        hostPeer.on('connection', (conn)=>{
-          conn.on('data', (data)=>onHostData(conn, data));
-          conn.on('close', ()=>removeStudent(conn.peer));
-          conn.on('error', ()=>removeStudent(conn.peer));
-        });
-        hostPeer.on('error', (err)=>{
-          console.error(err);
-          hostStatus.classList.remove('hidden');
-          hostStatus.textContent = 'Error de red: ' + (err && err.type ? err.type : 'desconocido');
-        });
-      }catch(e){
-        console.error(e);
-        hostStatus.textContent = 'No se pudo iniciar la sala.';
-      }
-    }
+                peer.on('open', (id) => {
+                    const connection = peer.connect(hostId.trim(), { reliable: true });
+                    
+                    connection.on('open', () => {
+                        setStatus('');
+                        setConn(connection);
+                        setStep('buzzer');
+                        connection.send({ type: 'JOIN', name: myName.trim() });
+                    });
 
-    function onHostData(conn, data){
-      if(!data || !data.type) return;
-      switch(data.type){
-        case 'JOIN': {
-          const name = String(data.name||'Anónimo');
-          students.set(conn.peer, { name, conn });
-          if (!scores.has(conn.peer)) scores.set(conn.peer, 0);
-          updateStudentCount(); renderScores();
-          // enviar estado inicial al nuevo alumno
-          try{ conn.send({ type:'SCORE', scores: Array.from(scores.entries()) }); }catch(e){}
-          try{ conn.send({ type: locked?'LOCK':'UNLOCK' }); }catch(e){}
-          if (timerEnd>0) try{ conn.send({ type:'TIMER_START', until: timerEnd }); }catch(e){}
-          break;
-        }
-        case 'BUZZ': {
-          if (locked) return; // si está bloqueado, ignoramos
-          // Evitar duplicados por alumno
-          if (buzzList.some(b=>b.id===conn.peer)) return;
-          const entry = { id: conn.peer, name: (students.get(conn.peer)?.name)||'Anónimo', time: Date.now() };
-          buzzList.push(entry);
-          renderBuzzList();
-          chordOK(); // sonido en host
-          // tras el primero, bloquear
-          if (buzzList.length===1){
-            setLocked(true);
-            broadcast({ type:'LOCK' });
-            stopTimer(); // detenemos si hay temporizador
-          }
-          break;
-        }
-      }
-    }
+                    connection.on('data', (data) => {
+                        if (data.type === 'RESET') {
+                            setIsBuzzed(false);
+                            if (navigator.vibrate) navigator.vibrate(100);
+                        }
+                    });
 
-    function updateStudentCount(){ studentCount.textContent = String(students.size); }
+                    connection.on('close', () => { 
+                        alert('El profesor ha cerrado la sesión.'); 
+                        window.location.reload(); 
+                    });
+                    
+                    connection.on('error', (err) => {
+                        setStatus('Error de conexión. Verifica el ID del profesor.');
+                    });
+                });
 
-    
-        function renderBuzzList(){
-      buzzListEl.innerHTML = '';
-      buzzList.forEach((b, idx)=>{
-        const li = document.createElement('li');
-        li.className = 'item' + (idx===0 ? ' first' : '');
-        const badge = document.createElement('div');
-        badge.className = 'badge' + (idx===0 ? ' first' : '');
-        badge.textContent = String(idx+1);
-        const nameSpan = document.createElement('div');
-        nameSpan.style.fontWeight = '700';
-        nameSpan.textContent = b.name;
+                peer.on('error', (err) => {
+                    setStatus(`Error: ${err.type === 'peer-unavailable' ? 'Sala no encontrada. Verifica el ID.' : err.type}`);
+                });
+            };
 
-        const actions = document.createElement('div');
-        actions.style.marginLeft = 'auto';
-        actions.style.display = 'flex';
-        actions.style.gap = '6px';
+            const handleBuzz = () => {
+                if (!conn || isBuzzed) return;
+                conn.send({ type: 'BUZZ' });
+                setIsBuzzed(true);
+                if (navigator.vibrate) navigator.vibrate([200]);
+            };
 
-        const okBtn = document.createElement('button');
-        okBtn.className = 'btn btn-emerald';
-        okBtn.textContent = '✓';
-        
-        const wrongBtn = document.createElement('button');
-        wrongBtn.className = 'btn btn-ghost';
-        wrongBtn.textContent = '✗';
+            if (step === 'connect') {
+                return (
+                    <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-md border border-slate-200 space-y-6">
+                        <div className="text-center">
+                            <h2 className="text-2xl font-bold text-indigo-900">Unirse a Clase</h2>
+                            <p className="text-slate-500">Introduce tus datos para entrar.</p>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Tu Nombre</label>
+                                <input type="text" value={myName} onChange={(e) => setMyName(e.target.value)} placeholder="Ej: Ana García" className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">ID de Sala del Profesor</label>
+                                <input type="text" value={hostId} onChange={(e) => setHostId(e.target.value)} placeholder="Pega el ID aquí" className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none font-mono" />
+                            </div>
+                        </div>
+                        {status && <div className={`text-sm p-3 rounded-lg ${status.includes('Error') || status.includes('Por favor') ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>{status}</div>}
+                        <button onClick={joinSession} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-bold text-lg transition">Entrar a Clase</button>
+                    </div>
+                );
+            }
 
-        // MODIFICACIÓN:
-        // 1. Botón OK suma 1 punto y deshabilita ambos botones.
-        // 2. Botón WRONG resta 1 punto y deshabilita ambos botones.
-        okBtn.onclick = ()=>{ 
-          addScore(b.id, +1); 
-          okBtn.disabled = true; 
-          wrongBtn.disabled = true; 
-        };
-        wrongBtn.onclick = ()=>{ 
-          addScore(b.id, -1); // <-- MODIFICADO DE 0 A -1
-          wrongBtn.disabled = true; 
-          okBtn.disabled = true; 
-        };
-        // FIN MODIFICACIÓN
+            return (
+                <div className="max-w-md mx-auto flex flex-col items-center space-y-6 py-8">
+                    <div className="text-center space-y-2">
+                        <h2 className="text-xl font-semibold text-slate-700">Conectado como <span className="text-indigo-600">{myName}</span></h2>
+                        <p className="text-sm text-slate-500 flex items-center justify-center gap-2"><span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>Esperando pregunta...</p>
+                    </div>
+                    <button 
+                        onClick={handleBuzz} 
+                        disabled={isBuzzed} 
+                        className={`
+                            relative w-64 h-64 rounded-full flex flex-col items-center justify-center gap-2 
+                            transition-all transform duration-150 
+                            ${isBuzzed 
+                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed scale-95 shadow-inner' 
+                                : 'bg-emerald-500 hover:bg-emerald-600 active:scale-90 active:bg-emerald-700 text-white shadow-[0_10px_0_rgb(6,95,70)] hover:shadow-[0_6px_0_rgb(6,95,70)] active:shadow-none active:translate-y-[10px]'
+                            }
+                        `}
+                    >
+                        {isBuzzed ? (
+                            <>
+                                <CheckCircle2 size={64} />
+                                <span className="text-xl font-bold">¡PULSADO!</span>
+                            </>
+                        ) : (
+                            <>
+                                <Gavel size={80} className="mb-2" />
+                                <span className="text-3xl font-black tracking-wider">PULSAR</span>
+                            </>
+                        )}
+                    </button>
+                    {isBuzzed && <p className="text-slate-600 animate-bounce">Espera a que el profesor resetee...</p>}
+                </div>
+            );
+        }
 
-        actions.append(okBtn, wrongBtn);
-
-        if (idx===0){
-          const first = document.createElement('div');
-          first.className = 'subtle';
-          first.style.marginLeft = '12px';
-          first.textContent = '¡Primero!';
-          li.append(badge, nameSpan, first, actions);
-        } else {
-          li.append(badge, nameSpan, actions);
-        }
-        buzzListEl.appendChild(li);
-      });
-      buzzCountBadge.textContent = buzzList.length + ' respuestas';
-    }
-        function addScore(peerId, delta){
-      if (!scores.has(peerId)) scores.set(peerId, 0);
-      
-      // MODIFICACIÓN: Permitir deltas != 0 (positivos o negativos)
-      if (delta !== 0) {
-        scores.set(peerId, scores.get(peerId) + delta);
-      }
-      // FIN MODIFICACIÓN
-      
-      renderScores();
-      broadcast({ type:'SCORE', scores: Array.from(scores.entries()) });
-    }
-        function renderScores(){
-      const entries = Array.from(scores.entries()).map(([id,score]) => ({ id, score, name: students.get(id)?.name || '—' }));
-      entries.sort((a,b)=> b.score - a.score || a.name.localeCompare(b.name));
-      scoreList.innerHTML = '';
-      for (const e of entries){
-        const li = document.createElement('li');
-        const left = document.createElement('div'); left.textContent = e.name;
-        const right = document.createElement('div'); right.textContent = e.score;
-        li.append(left,right);
-        scoreList.appendChild(li);
-      }
-    }
-
-        function removeStudent(peerId){
-      students.delete(peerId);
-      
-      // MODIFICACIÓN: Borrar también del marcador y re-renderizar
-      scores.delete(peerId);
-      renderScores();
-      // FIN MODIFICACIÓN
-
-      updateStudentCount();
-      const before = buzzList.length;
-      buzzList = buzzList.filter(b=>b.id!==peerId);
-      if (buzzList.length !== before) renderBuzzList();
-    }
-        function resetAll(){
-      buzzList = []; renderBuzzList();
-      setLocked(true);
-      stopTimer(); updateTimerLabel(0);
-      broadcast({ type:'RESET' });
-      chordReset();
-    }
-
-    function startQuestion(){
-      // desbloquear, vaciar lista y arrancar temporizador
-      buzzList = []; renderBuzzList();
-      setLocked(false);
-      const secs = Math.max(1, parseInt(timerSeconds.value||'0',10));
-      timerEnd = Date.now() + secs*1000;
-      startTimer();
-      broadcast({ type:'UNLOCK' });
-      broadcast({ type:'TIMER_START', until: timerEnd });
-    }
-
-    function startTimer(){
-      stopTimer();
-      timerInt = setInterval(()=>{
-        const left = Math.max(0, Math.ceil((timerEnd - Date.now())/1000));
-        updateTimerLabel(left);
-        if (left <= 0){
-          stopTimer();
-          setLocked(true);
-          broadcast({ type:'LOCK' });
-          chordReset();
-        }
-      }, 250);
-    }
-    function stopTimer(){ if (timerInt){ clearInterval(timerInt); timerInt=null; } }
-    function updateTimerLabel(leftSecs){ timerLabel.textContent = secToMMSS(leftSecs); }
-
-    resetBtn.onclick = resetAll;
-    timerStartBtn.onclick = startQuestion;
-    timerStopBtn.onclick = ()=>{ stopTimer(); };
-    copyBtn.onclick = ()=>{
-      const t = roomIdEl.value;
-      if (!t) return;
-      if (navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(t).then(()=>alert('ID copiado')); }
-      else { const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert('ID copiado'); }
-    };
-
-    clearScoresBtn.onclick = ()=>{
-      scores.forEach((_,k)=>scores.set(k,0));
-      renderScores();
-      broadcast({ type:'SCORE', scores: Array.from(scores.entries()) });
-    };
-
-    showQRBtn.onclick = ()=>{
-      qrContainer.innerHTML = '';
-      new QRCode(qrContainer, { text: roomIdEl.value, width: 220, height: 220 });
-      qrText.textContent = roomIdEl.value;
-      qrModal.classList.remove('hidden');
-    };
-    closeQR.onclick = ()=> qrModal.classList.add('hidden');
-
-    // ========= CLIENTE =========
-    const studentNameEl = document.getElementById('studentName');
-    const hostIdInput = document.getElementById('hostIdInput');
-    const joinBtn = document.getElementById('joinBtn');
-    const clientConnectMsg = document.getElementById('clientConnectMsg');
-    const youAre = document.getElementById('youAre');
-    const buzzerBtn = document.getElementById('buzzerBtn');
-    const waitReset = document.getElementById('waitReset');
-    const clientLockState = document.getElementById('clientLockState');
-    const clientTimer = document.getElementById('clientTimer');
-    const myScoreEl = document.getElementById('myScore');
-
-    function showClientMsg(text, error=false){
-      if (!text){ clientConnectMsg.classList.add('hidden'); clientConnectMsg.textContent=''; return; }
-style       clientConnectMsg.textContent = text;
-      clientConnectMsg.classList.remove('hidden');
-      clientConnectMsg.style.background = error ? '#fef2f2' : '#eff6ff';
-      clientConnectMsg.style.color = error ? '#b91c1c' : '#1e40af';
-      clientConnectMsg.style.padding='10px'; clientConnectMsg.style.borderRadius='10px';
-    }
-
-    joinBtn.onclick = ()=>{
-      const name = (studentNameEl.value||'').trim();
-      const host = (hostIdInput.value||'').trim();
-      if (!name || !host){ showClientMsg('Por favor introduce tu nombre y el ID de sala.'); return; }
-      clientName = name; startClient(host);
-    };
-
-    function setClientLocked(v){
-      clientLocked = v;
-      clientLockState.textContent = v ? 'bloqueado' : 'desbloqueado';
-      if (v){ buzzerBtn.classList.add('disabled'); buzzerBtn.disabled = true; }
-      else  { buzzerBtn.classList.remove('disabled'); buzzerBtn.disabled = false; }
-    }
-
-    function startClient(host){
-      try{
-        showClientMsg('Conectando con el profesor…');
-        clientPeer = new Peer({ debug:1 });
-        clientPeer.on('open', ()=>{
-          clientConn = clientPeer.connect(host, { reliable:true });
-          clientConn.on('open', ()=>{
-            showClientMsg('');
-            clientConn.send({ type:'JOIN', name: clientName });
-            youAre.textContent = clientName;
-            show(views.clientBuzzer);
-            setClientLocked(true);
-            setBuzzed(false);
-            // handlers
-            clientConn.on('data', (data)=>onClientData(data));
-            clientConn.on('close', ()=>{ alert('El profesor ha cerrado la sesión.'); location.reload(); });
-            clientConn.on('error', ()=>{ showClientMsg('Error de conexión con el profesor. Verifica el ID.', true); });
-          });
-          clientConn.on('error', ()=>{ showClientMsg('No se pudo conectar al host. Verifica el ID.', true); });
-        });
-        clientPeer.on('error', (err)=>{ const msg=(err?.type==='peer-unavailable')?'Sala no encontrada. Verifica el ID.':('Error: '+(err?.type||'desconocido')); showClientMsg(msg,true); });
-ci    }catch(e){
-        showClientMsg('No se pudo iniciar el cliente.', true);
-      }
-    }
-
-        function onClientData(data){
-      if (!data || !data.type) return;
-      switch(data.type){
-        case 'RESET':
-          setBuzzed(false); setClientLocked(true); stopClientTimer(); clientTimer.textContent='--:--'; chordReset(); break;
-        case 'LOCK':
-          setClientLocked(true); break;
-        case 'UNLOCK':
-          setBuzzed(false); setClientLocked(false); break;
-ReadMe         case 'TIMER_START':
-          clientTimerStart(data.until); break;
-        case 'SCORE':
-          // MODIFICACIÓN: Eliminada línea de código "muerto" que no se usaba (const me = ...)
-          const my = (data.scores||[]).find(([id,sc])=> id=== (clientPeer&&clientPeer.id));
-          if (my){ 
-            myScore = my[1]; 
-            myScoreEl.textContent = 'Tu puntuación: '+myScore; 
-          }
-          break;
-      }
-    }
-        function setBuzzed(isBuzzed){
-      if (isBuzzed){
-        buzzerBtn.classList.add('disabled'); buzzerBtn.disabled = true;
-        buzzerBtn.textContent = '¡PULSADO!'; waitReset.classList.remove('hidden');
-      } else {
-        buzzerBtn.classList.remove('disabled'); buzzerBtn.disabled = clientLocked;
-CSS        buzzerBtn.textContent = 'PULSAR'; waitReset.classList.add('hidden');
-      }
-    }
-
-    function clientTimerStart(untilMs){
-      clientTimerEnd = untilMs; stopClientTimer();
-      clientTimerInt = setInterval(()=>{
-        const left = Math.max(0, Math.ceil((clientTimerEnd - Date.now())/1000));
-        clientTimer.textContent = secToMMSS(left);
-        if (left<=0){ stopClientTimer(); }
-      }, 250);
-    }
-    function stopClientTimer(){ if (clientTimerInt){ clearInterval(clientTimerInt); clientTimerInt=null; } }
-
-    buzzerBtn.onclick = ()=>{
-      if (!clientConn || clientLocked || buzzerBtn.classList.contains('disabled')) return;
-      try{ clientConn.send({ type:'BUZZ' }); setBuzzed(true); beep(1000,160); }catch(e){}
-    };
-
-    // ========= Botones top-level =========
-    // QR
-    document.getElementById('closeQR').onclick = ()=> qrModal.classList.add('hidden');
-
-  </script>
+        // Renderizado de la aplicación
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
