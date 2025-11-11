@@ -4,8 +4,19 @@
   <meta charset="utf-8" />
   <title>QuizBuzzer P2P (HTML/JS)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- PeerJS (CDN alternativo jsDelivr) -->
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <!-- PeerJS (carga con fallback: jsDelivr -> unpkg) -->
+  <script>
+  (function(){
+    var s=document.createElement('script');
+    s.src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js";
+    s.onerror=function(){
+      var s2=document.createElement('script');
+      s2.src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js";
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s);
+  })();
+  </script>
   <!-- QRCode -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
@@ -81,7 +92,6 @@
 
     <!-- Host -->
     <section id="view-host" class="hidden grid grid-3">
-      <!-- Panel principal -->
       <div class="card" style="display:flex;flex-direction:column;gap:14px">
         <h3 style="margin:0">Panel del Profesor</h3>
         <div id="hostStatus" class="muted">Iniciando red...</div>
@@ -179,22 +189,44 @@
   </main>
 
   <script>
-    // ========= Opciones PeerJS forzando HTTPS/443 + STUN =========
-    const PEER_OPTS = {
-      host: '0.peerjs.com',
-      port: 443,
-      path: '/peerjs',
-      secure: true,
-      debug: 2,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:global.stun.twilio.com:3478?transport=udp' }
-        ]
+    // ========= Fallbacks de conexión PeerJS (3 endpoints) =========
+    const ENDPOINTS = [
+      null, // cloud por defecto (elige host automáticamente)
+      { host: '0.peerjs.com', port: 443, path: '/peerjs', secure: true, debug: 2,
+        config: { iceServers: [{urls:'stun:stun.l.google.com:19302'}] } },
+      { host: 'peerjs.com',   port: 443, path: '/peerjs', secure: true, debug: 2,
+        config: { iceServers: [{urls:'stun:stun.l.google.com:19302'}] } },
+    ];
+    function hookPeerDebug(peer, role){
+      if(!peer) return;
+      peer.on('open', id => console.log(`[${role}] open`, id));
+      peer.on('disconnected', ()=> console.warn(`[${role}] disconnected`));
+      peer.on('close', ()=> console.warn(`[${role}] close`));
+      peer.on('error', err => console.error(`[${role}] error`, err));
+    }
+    function tryPeer(idOrUndefined, opts, role, timeoutMs=5000){
+      return new Promise(resolve=>{
+        let p;
+        try{ p = opts ? new Peer(idOrUndefined, opts) : new Peer(idOrUndefined); }
+        catch(e){ return resolve({ ok:false, err:e }); }
+        hookPeerDebug(p, role);
+        let done=false;
+        const t=setTimeout(()=>{ if(!done){ try{p.destroy();}catch{} done=true; resolve({ok:false,err:new Error('timeout')}); }}, timeoutMs);
+        p.on('open', id=>{ if(!done){ clearTimeout(t); done=true; resolve({ok:true,peer:p,id}); }});
+        p.on('error', err=>{ console.error(`[${role}]`, err); /* dejamos que resuelva el timeout */ });
+      });
+    }
+    async function createPeerWithFallback(idOrUndefined, role){
+      for (const opts of ENDPOINTS){
+        const label = opts ? `${opts.host}${opts.path}` : 'default-cloud';
+        console.log(`[${role}] probando ${label}…`);
+        const r = await tryPeer(idOrUndefined, opts, role, 5000);
+        if (r.ok) { console.log(`[${role}] conectado a ${label}`); return r.peer; }
       }
-    };
+      return null;
+    }
 
-    // ========= Utilidades =========
+    // ========= Utilidades UI =========
     const views = {
       landing: document.getElementById('view-landing'),
       host: document.getElementById('view-host'),
@@ -210,7 +242,7 @@
     const fmt = (s)=> String(s).padStart(2,'0');
     const secToMMSS = (secs)=>`${fmt(Math.max(0,Math.floor(secs/60)))}:${fmt(Math.max(0,Math.floor(secs%60)))}`;
 
-    // Sonidos (WebAudio)
+    // Sonidos
     let audioCtx;
     function beep(freq=880, timeMs=150){
       try{
@@ -218,32 +250,24 @@
         const o = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         o.type = 'sine'; o.frequency.value = freq;
-        g.gain.value = 0.04;
-        o.connect(g); g.connect(audioCtx.destination);
-        o.start(); setTimeout(()=>{ o.stop(); }, timeMs);
+        g.gain.value = 0.04; o.connect(g); g.connect(audioCtx.destination);
+        o.start(); setTimeout(()=>o.stop(), timeMs);
       }catch(e){}
     }
     function chordOK(){ beep(1046,120); setTimeout(()=>beep(1318,120),120); }
     function chordReset(){ beep(392,120); setTimeout(()=>beep(392,120),140); }
 
-    // ========= Estado común =========
+    // ========= Estado =========
     let hostPeer=null, hostId=null, locked=true, timerInt=null, timerEnd=0;
-    const students = new Map(); // peerId -> {name, conn}
-    let buzzList = [];          // [{id,name,time}]
-    const scores = new Map();   // peerId -> number
-
+    const students = new Map(); let buzzList = []; const scores = new Map();
     let clientPeer=null, clientConn=null, clientName="", myScore=0, clientLocked=true, clientTimerInt=null, clientTimerEnd=0;
 
-    // ========= Landing =========
+    // Landing
     document.getElementById('btnHost').onclick = startHost;
     document.getElementById('btnClient').onclick = ()=>show(views.clientConnect);
-    exitBtn.onclick = ()=>{
-      try{ hostPeer && hostPeer.destroy(); }catch(e){}
-      try{ clientPeer && clientPeer.destroy(); }catch(e){}
-      location.reload();
-    };
+    exitBtn.onclick = ()=>{ try{hostPeer&&hostPeer.destroy()}catch{} try{clientPeer&&clientPeer.destroy()}catch{} location.reload(); };
 
-    // ========= HOST =========
+    // HOST UI
     const hostStatus = document.getElementById('hostStatus');
     const hostReady = document.getElementById('hostReady');
     const roomIdEl = document.getElementById('roomId');
@@ -257,10 +281,8 @@
     const timerSeconds = document.getElementById('timerSeconds');
     const timerStartBtn = document.getElementById('timerStartBtn');
     const timerStopBtn = document.getElementById('timerStopBtn');
-
     const scoreList = document.getElementById('scoreList');
     const clearScoresBtn = document.getElementById('clearScoresBtn');
-
     const showQRBtn = document.getElementById('showQRBtn');
     const qrModal = document.getElementById('qrModal');
     const qrContainer = document.getElementById('qrContainer');
@@ -268,55 +290,33 @@
     const closeQR = document.getElementById('closeQR');
 
     function randomId(){ return Math.random().toString(36).substring(2,8).toUpperCase(); }
+    function setLocked(v){ locked=v; lockState.textContent = v ? 'bloqueado' : 'desbloqueado'; }
+    function broadcast(msg){ students.forEach(s=>{ try{ s.conn.open && s.conn.send(msg); }catch(e){} }); }
+    function updateStudentCount(){ studentCount.textContent = String(students.size); }
+
+    async function startHost(){
+      show(views.host);
+      hostStatus.textContent = 'Inicializando sala…';
+      await initHostPeer();
+    }
 
     async function initHostPeer(){
-  hostStatus.textContent = 'Inicializando sala…';
-  const idWanted = 'quiz-host-' + Math.random().toString(36).slice(2,8).toUpperCase();
-  hostPeer = await createPeerWithFallback(idWanted, 'HOST');
-  if (!hostPeer){ hostStatus.textContent = 'Error de red (no se pudo abrir socket). Prueba otra red o desactiva bloqueadores.'; return; }
-  hostPeer.on('connection', (conn)=>{
-    conn.on('data', (d)=>onHostData(conn,d));
-    conn.on('close', ()=>removeStudent(conn.peer));
-    conn.on('error', ()=>removeStudent(conn.peer));
-  });
-  roomIdEl.value = hostPeer.id;
-  hostStatus.classList.add('hidden');
-  hostReady.classList.remove('hidden');
-  updateStudentCount(); setLocked(true); updateTimerLabel(0);
-}
-
-
-    function setLocked(v){
-      locked = v;
-      lockState.textContent = locked ? 'bloqueado' : 'desbloqueado';
-    }
-
-    function broadcast(msg){
-      students.forEach(s=>{ try{ s.conn.open && s.conn.send(msg); }catch(e){} });
-    }
-
-    function initHostPeer(){
       try{
-        hostPeer = new Peer('quiz-host-' + randomId(), PEER_OPTS);
-        hostPeer.on('open', (id)=>{
-          hostId = id;
-          roomIdEl.value = id;
-          hostStatus.classList.add('hidden');
-          hostReady.classList.remove('hidden');
-          updateStudentCount();
-          setLocked(true);
-          updateTimerLabel(0);
-        });
+        const idWanted = 'quiz-host-' + randomId();
+        hostPeer = await createPeerWithFallback(idWanted, 'HOST');
+        if (!hostPeer){
+          hostStatus.textContent = 'Error de red: no se pudo abrir el socket (WSS). Prueba otra red o desactiva bloqueadores.';
+          return;
+        }
+        hostId = hostPeer.id;
         hostPeer.on('connection', (conn)=>{
-          conn.on('data', (data)=>onHostData(conn, data));
+          conn.on('data', (data)=>onHostData(conn,data));
           conn.on('close', ()=>removeStudent(conn.peer));
-          conn.on('error', (err)=>{ console.error('Conn error:', err); removeStudent(conn.peer); });
+          conn.on('error', ()=>removeStudent(conn.peer));
         });
-        hostPeer.on('error', (err)=>{
-          console.error('PeerJS error (host):', err);
-          hostStatus.classList.remove('hidden');
-          hostStatus.textContent = 'Error de red: ' + (err?.type || err?.message || 'desconocido');
-        });
+        roomIdEl.value = hostId;
+        hostStatus.classList.add('hidden'); hostReady.classList.remove('hidden');
+        updateStudentCount(); setLocked(true); updateTimerLabel(0);
       }catch(e){
         console.error(e);
         hostStatus.textContent = 'No se pudo iniciar la sala.';
@@ -341,258 +341,163 @@
           if (buzzList.some(b=>b.id===conn.peer)) return;
           const entry = { id: conn.peer, name: (students.get(conn.peer)?.name)||'Anónimo', time: Date.now() };
           buzzList.push(entry);
-          renderBuzzList();
-          chordOK();
+          renderBuzzList(); chordOK();
           if (buzzList.length===1){
-            setLocked(true);
-            broadcast({ type:'LOCK' });
-            stopTimer();
+            setLocked(true); broadcast({ type:'LOCK' }); stopTimer();
           }
           break;
         }
       }
     }
 
-    function updateStudentCount(){ studentCount.textContent = String(students.size); }
-
     function renderBuzzList(){
       buzzListEl.innerHTML = '';
       buzzList.forEach((b, idx)=>{
-        const li = document.createElement('li');
-        li.className = 'item' + (idx===0 ? ' first' : '');
-        const badge = document.createElement('div');
-        badge.className = 'badge' + (idx===0 ? ' first' : '');
-        badge.textContent = String(idx+1);
-        const nameSpan = document.createElement('div');
-        nameSpan.style.fontWeight = '700';
-        nameSpan.textContent = b.name;
-
-        const actions = document.createElement('div');
-        actions.style.marginLeft = 'auto';
-        actions.style.display = 'flex';
-        actions.style.gap = '6px';
-
-        const okBtn = document.createElement('button');
-        okBtn.className = 'btn btn-emerald';
-        okBtn.textContent = '✓';
-        okBtn.onclick = ()=>{ addScore(b.id, +1); okBtn.disabled = true; };
-
-        const wrongBtn = document.createElement('button');
-        wrongBtn.className = 'btn btn-ghost';
-        wrongBtn.textContent = '✗';
-        wrongBtn.onclick = ()=>{ addScore(b.id, 0); wrongBtn.disabled = true; };
-
-        actions.append(okBtn, wrongBtn);
-
-        if (idx===0){
-          const first = document.createElement('div');
-          first.className = 'subtle';
-          first.style.marginLeft = '12px';
-          first.textContent = '¡Primero!';
-          li.append(badge, nameSpan, first, actions);
-        } else {
-          li.append(badge, nameSpan, actions);
-        }
+        const li = document.createElement('li'); li.className='item'+(idx===0?' first':'');
+        const badge=document.createElement('div'); badge.className='badge'+(idx===0?' first':''); badge.textContent=String(idx+1);
+        const nameSpan=document.createElement('div'); nameSpan.style.fontWeight='700'; nameSpan.textContent=b.name;
+        const actions=document.createElement('div'); actions.style.marginLeft='auto'; actions.style.display='flex'; actions.style.gap='6px';
+        const okBtn=document.createElement('button'); okBtn.className='btn btn-emerald'; okBtn.textContent='✓'; okBtn.onclick=()=>{ addScore(b.id, +1); okBtn.disabled=true; };
+        const wrongBtn=document.createElement('button'); wrongBtn.className='btn btn-ghost'; wrongBtn.textContent='✗'; wrongBtn.onclick=()=>{ addScore(b.id, 0); wrongBtn.disabled=true; };
+        actions.append(okBtn,wrongBtn);
+        if (idx===0){ const first=document.createElement('div'); first.className='subtle'; first.style.marginLeft='12px'; first.textContent='¡Primero!'; li.append(badge,nameSpan,first,actions); }
+        else { li.append(badge,nameSpan,actions); }
         buzzListEl.appendChild(li);
       });
-      buzzCountBadge.textContent = buzzList.length + ' respuestas';
+      buzzCountBadge.textContent = buzzList.length+' respuestas';
     }
 
     function addScore(peerId, delta){
       if (!scores.has(peerId)) scores.set(peerId, 0);
       if (delta>0) scores.set(peerId, scores.get(peerId)+delta);
-      renderScores();
-      broadcast({ type:'SCORE', scores: Array.from(scores.entries()) });
+      renderScores(); broadcast({ type:'SCORE', scores: Array.from(scores.entries()) });
     }
 
     function renderScores(){
       const entries = Array.from(scores.entries()).map(([id,score]) => ({ id, score, name: students.get(id)?.name || '—' }));
       entries.sort((a,b)=> b.score - a.score || a.name.localeCompare(b.name));
-      scoreList.innerHTML = '';
-      for (const e of entries){
-        const li = document.createElement('li');
-        const left = document.createElement('div'); left.textContent = e.name;
-        const right = document.createElement('div'); right.textContent = e.score;
-        li.append(left,right);
-        scoreList.appendChild(li);
-      }
+      scoreList.innerHTML=''; for(const e of entries){ const li=document.createElement('li'); const l=document.createElement('div'); l.textContent=e.name; const r=document.createElement('div'); r.textContent=e.score; li.append(l,r); scoreList.appendChild(li); }
     }
 
     function removeStudent(peerId){
-      students.delete(peerId);
-      updateStudentCount();
-      const before = buzzList.length;
-      buzzList = buzzList.filter(b=>b.id!==peerId);
-      if (buzzList.length !== before) renderBuzzList();
+      students.delete(peerId); updateStudentCount();
+      const before=buzzList.length; buzzList=buzzList.filter(b=>b.id!==peerId); if (buzzList.length!==before) renderBuzzList();
     }
 
     function resetAll(){
-      buzzList = []; renderBuzzList();
-      setLocked(true);
-      stopTimer(); updateTimerLabel(0);
-      broadcast({ type:'RESET' });
-      chordReset();
+      buzzList=[]; renderBuzzList(); setLocked(true); stopTimer(); updateTimerLabel(0);
+      broadcast({ type:'RESET' }); chordReset();
     }
 
     function startQuestion(){
-      buzzList = []; renderBuzzList();
-      setLocked(false);
-      const secs = Math.max(1, parseInt(timerSeconds.value||'0',10));
-      timerEnd = Date.now() + secs*1000;
-      startTimer();
-      broadcast({ type:'UNLOCK' });
-      broadcast({ type:'TIMER_START', until: timerEnd });
+      buzzList=[]; renderBuzzList(); setLocked(false);
+      const secs=Math.max(1, parseInt(timerSeconds.value||'0',10));
+      timerEnd=Date.now()+secs*1000; startTimer();
+      broadcast({ type:'UNLOCK' }); broadcast({ type:'TIMER_START', until: timerEnd });
     }
 
     function startTimer(){
       stopTimer();
-      timerInt = setInterval(()=>{
-        const left = Math.max(0, Math.ceil((timerEnd - Date.now())/1000));
+      timerInt=setInterval(()=>{
+        const left=Math.max(0, Math.ceil((timerEnd-Date.now())/1000));
         updateTimerLabel(left);
-        if (left <= 0){
-          stopTimer();
-          setLocked(true);
-          broadcast({ type:'LOCK' });
-          chordReset();
-        }
-      }, 250);
+        if (left<=0){ stopTimer(); setLocked(true); broadcast({type:'LOCK'}); chordReset(); }
+      },250);
     }
     function stopTimer(){ if (timerInt){ clearInterval(timerInt); timerInt=null; } }
     function updateTimerLabel(leftSecs){ timerLabel.textContent = secToMMSS(leftSecs); }
 
-    resetBtn.onclick = resetAll;
-    timerStartBtn.onclick = startQuestion;
-    timerStopBtn.onclick = ()=>{ stopTimer(); };
-    copyBtn.onclick = ()=>{
-      const t = roomIdEl.value;
-      if (!t) return;
-      if (navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(t).then(()=>alert('ID copiado')); }
+    resetBtn.onclick=resetAll;
+    timerStartBtn.onclick=startQuestion;
+    timerStopBtn.onclick=()=>stopTimer();
+    copyBtn.onclick=()=>{
+      const t=roomIdEl.value; if(!t) return;
+      if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(t).then(()=>alert('ID copiado')); }
       else { const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); alert('ID copiado'); }
     };
+    clearScoresBtn.onclick=()=>{ scores.forEach((_,k)=>scores.set(k,0)); renderScores(); broadcast({ type:'SCORE', scores: Array.from(scores.entries()) }); };
+    showQRBtn.onclick=()=>{ qrContainer.innerHTML=''; new QRCode(qrContainer,{ text: roomIdEl.value, width:220, height:220 }); qrText.textContent=roomIdEl.value; qrModal.classList.remove('hidden'); };
+    closeQR.onclick=()=> qrModal.classList.add('hidden');
 
-    clearScoresBtn.onclick = ()=>{
-      scores.forEach((_,k)=>scores.set(k,0));
-      renderScores();
-      broadcast({ type:'SCORE', scores: Array.from(scores.entries()) });
-    };
-
-    showQRBtn.onclick = ()=>{
-      qrContainer.innerHTML = '';
-      new QRCode(qrContainer, { text: roomIdEl.value, width: 220, height: 220 });
-      qrText.textContent = roomIdEl.value;
-      qrModal.classList.remove('hidden');
-    };
-    closeQR.onclick = ()=> qrModal.classList.add('hidden');
-
-    // ========= CLIENTE =========
-    const studentNameEl = document.getElementById('studentName');
-    const hostIdInput = document.getElementById('hostIdInput');
-    const joinBtn = document.getElementById('joinBtn');
-    const clientConnectMsg = document.getElementById('clientConnectMsg');
-    const youAre = document.getElementById('youAre');
-    const buzzerBtn = document.getElementById('buzzerBtn');
-    const waitReset = document.getElementById('waitReset');
-    const clientLockState = document.getElementById('clientLockState');
-    const clientTimer = document.getElementById('clientTimer');
-    const myScoreEl = document.getElementById('myScore');
+    // CLIENTE UI
+    const studentNameEl=document.getElementById('studentName');
+    const hostIdInput=document.getElementById('hostIdInput');
+    const joinBtn=document.getElementById('joinBtn');
+    const clientConnectMsg=document.getElementById('clientConnectMsg');
+    const youAre=document.getElementById('youAre');
+    const buzzerBtn=document.getElementById('buzzerBtn');
+    const waitReset=document.getElementById('waitReset');
+    const clientLockState=document.getElementById('clientLockState');
+    const clientTimer=document.getElementById('clientTimer');
+    const myScoreEl=document.getElementById('myScore');
 
     function showClientMsg(text, error=false){
       if (!text){ clientConnectMsg.classList.add('hidden'); clientConnectMsg.textContent=''; return; }
-      clientConnectMsg.textContent = text;
-      clientConnectMsg.classList.remove('hidden');
-      clientConnectMsg.style.background = error ? '#fef2f2' : '#eff6ff';
-      clientConnectMsg.style.color = error ? '#b91c1c' : '#1e40af';
+      clientConnectMsg.textContent=text; clientConnectMsg.classList.remove('hidden');
+      clientConnectMsg.style.background= error? '#fef2f2':'#eff6ff';
+      clientConnectMsg.style.color= error? '#b91c1c':'#1e40af';
       clientConnectMsg.style.padding='10px'; clientConnectMsg.style.borderRadius='10px';
     }
 
-    joinBtn.onclick = ()=>{
-      const name = (studentNameEl.value||'').trim();
-      const host = (hostIdInput.value||'').trim();
-      if (!name || !host){ showClientMsg('Por favor introduce tu nombre y el ID de sala.'); return; }
-      clientName = name; startClient(host);
+    joinBtn.onclick=()=>{ const name=(studentNameEl.value||'').trim(); const host=(hostIdInput.value||'').trim();
+      if(!name||!host){ showClientMsg('Por favor introduce tu nombre y el ID de sala.'); return; }
+      clientName=name; startClient(host);
     };
 
     function setClientLocked(v){
-      clientLocked = v;
-      clientLockState.textContent = v ? 'bloqueado' : 'desbloqueado';
-      if (v){ buzzerBtn.classList.add('disabled'); buzzerBtn.disabled = true; }
-      else  { buzzerBtn.classList.remove('disabled'); buzzerBtn.disabled = false; }
+      clientLocked=v; clientLockState.textContent = v ? 'bloqueado':'desbloqueado';
+      if(v){ buzzerBtn.classList.add('disabled'); buzzerBtn.disabled=true; }
+      else { buzzerBtn.classList.remove('disabled'); buzzerBtn.disabled=false; }
     }
 
     async function startClient(host){
-  try{
-    showClientMsg('Conectando con el profesor…');
-    clientPeer = await createPeerWithFallback(undefined, 'CLIENT');
-    if (!clientPeer){ showClientMsg('Error de red (no se pudo abrir socket). Prueba otra red o desactiva bloqueadores.', true); return; }
-    const c = clientPeer.connect(host, { reliable:true });
-    c.on('open', ()=>{
-      clientConn = c;
-      showClientMsg('');
-      clientConn.send({ type:'JOIN', name: clientName });
-      youAre.textContent = clientName;
-      show(views.clientBuzzer);
-      setClientLocked(true); setBuzzed(false);
-      clientConn.on('data', (data)=>onClientData(data));
-      clientConn.on('close', ()=>{ alert('El profesor ha cerrado la sesión.'); location.reload(); });
-      clientConn.on('error', ()=>{ showClientMsg('Error de conexión con el profesor. Verifica el ID.', true); });
-    });
-    c.on('error', (err)=>{ console.error('Conn error (client):', err); showClientMsg('No se pudo conectar al host. Verifica el ID.', true); });
-  }catch(e){
-    console.error(e);
-    showClientMsg('No se pudo iniciar el cliente.', true);
-  }
-}
-      }catch(e){
-        console.error(e);
-        showClientMsg('No se pudo iniciar el cliente.', true);
-      }
+      try{
+        showClientMsg('Conectando con el profesor…');
+        clientPeer = await createPeerWithFallback(undefined, 'CLIENT');
+        if (!clientPeer){ showClientMsg('Error de red: no se pudo abrir el socket (WSS).', true); return; }
+        const c = clientPeer.connect(host, { reliable:true });
+        c.on('open', ()=>{
+          clientConn=c; showClientMsg('');
+          clientConn.send({ type:'JOIN', name: clientName });
+          youAre.textContent=clientName; show(views.clientBuzzer); setClientLocked(true); setBuzzed(false);
+          clientConn.on('data',(data)=>onClientData(data));
+          clientConn.on('close', ()=>{ alert('El profesor ha cerrado la sesión.'); location.reload(); });
+          clientConn.on('error', ()=>{ showClientMsg('Error de conexión con el profesor. Verifica el ID.', true); });
+        });
+        c.on('error',(err)=>{ console.error('Conn error (client):',err); showClientMsg('No se pudo conectar al host. Verifica el ID.', true); });
+      }catch(e){ console.error(e); showClientMsg('No se pudo iniciar el cliente.', true); }
     }
 
     function onClientData(data){
       if (!data || !data.type) return;
       switch(data.type){
-        case 'RESET':
-          setBuzzed(false); setClientLocked(true); stopClientTimer(); clientTimer.textContent='--:--'; chordReset(); break;
-        case 'LOCK':
-          setClientLocked(true); break;
-        case 'UNLOCK':
-          setBuzzed(false); setClientLocked(false); break;
-        case 'TIMER_START':
-          clientTimerStart(data.until); break;
+        case 'RESET': setBuzzed(false); setClientLocked(true); stopClientTimer(); clientTimer.textContent='--:--'; chordReset(); break;
+        case 'LOCK':  setClientLocked(true); break;
+        case 'UNLOCK':setBuzzed(false); setClientLocked(false); break;
+        case 'TIMER_START': clientTimerStart(data.until); break;
         case 'SCORE':
-          const my = (data.scores||[]).find(([id,sc])=> id=== (clientPeer&&clientPeer.id));
-          if (my){ myScore = my[1]; myScoreEl.textContent = 'Tu puntuación: '+myScore; }
+          const my=(data.scores||[]).find(([id])=> id===(clientPeer&&clientPeer.id));
+          if (my){ myScore=my[1]; myScoreEl.textContent='Tu puntuación: '+myScore; }
           break;
       }
     }
 
     function setBuzzed(isBuzzed){
-      if (isBuzzed){
-        buzzerBtn.classList.add('disabled'); buzzerBtn.disabled = true;
-        buzzerBtn.textContent = '¡PULSADO!'; waitReset.classList.remove('hidden');
-      } else {
-        buzzerBtn.classList.remove('disabled'); buzzerBtn.disabled = clientLocked;
-        buzzerBtn.textContent = 'PULSAR'; waitReset.classList.add('hidden');
-      }
+      if(isBuzzed){ buzzerBtn.classList.add('disabled'); buzzerBtn.disabled=true; buzzerBtn.textContent='¡PULSADO!'; waitReset.classList.remove('hidden'); }
+      else { buzzerBtn.classList.remove('disabled'); buzzerBtn.disabled=clientLocked; buzzerBtn.textContent='PULSAR'; waitReset.classList.add('hidden'); }
     }
 
     function clientTimerStart(untilMs){
-      clientTimerEnd = untilMs; stopClientTimer();
-      clientTimerInt = setInterval(()=>{
-        const left = Math.max(0, Math.ceil((clientTimerEnd - Date.now())/1000));
-        clientTimer.textContent = secToMMSS(left);
-        if (left<=0){ stopClientTimer(); }
-      }, 250);
+      clientTimerEnd=untilMs; stopClientTimer();
+      clientTimerInt=setInterval(()=>{ const left=Math.max(0, Math.ceil((clientTimerEnd-Date.now())/1000)); clientTimer.textContent=secToMMSS(left); if(left<=0){ stopClientTimer(); } },250);
     }
-    function stopClientTimer(){ if (clientTimerInt){ clearInterval(clientTimerInt); clientTimerInt=null; } }
+    function stopClientTimer(){ if(clientTimerInt){ clearInterval(clientTimerInt); clientTimerInt=null; } }
 
-    buzzerBtn.onclick = ()=>{
-      if (!clientConn || clientLocked || buzzerBtn.classList.contains('disabled')) return;
+    buzzerBtn.onclick=()=>{ if(!clientConn || clientLocked || buzzerBtn.classList.contains('disabled')) return;
       try{ clientConn.send({ type:'BUZZ' }); setBuzzed(true); beep(1000,160); }catch(e){}
     };
 
-    // Cerrar QR
-    document.getElementById('closeQR').onclick = ()=> qrModal.classList.add('hidden');
+    document.getElementById('closeQR').onclick=()=> qrModal.classList.add('hidden');
   </script>
 </body>
 </html>
