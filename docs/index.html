@@ -269,11 +269,22 @@
 
     function randomId(){ return Math.random().toString(36).substring(2,8).toUpperCase(); }
 
-    function startHost(){
-      show(views.host);
-      hostStatus.textContent = 'Inicializando sala…';
-      initHostPeer();
-    }
+    async function initHostPeer(){
+  hostStatus.textContent = 'Inicializando sala…';
+  const idWanted = 'quiz-host-' + Math.random().toString(36).slice(2,8).toUpperCase();
+  hostPeer = await createPeerWithFallback(idWanted, 'HOST');
+  if (!hostPeer){ hostStatus.textContent = 'Error de red (no se pudo abrir socket). Prueba otra red o desactiva bloqueadores.'; return; }
+  hostPeer.on('connection', (conn)=>{
+    conn.on('data', (d)=>onHostData(conn,d));
+    conn.on('close', ()=>removeStudent(conn.peer));
+    conn.on('error', ()=>removeStudent(conn.peer));
+  });
+  roomIdEl.value = hostPeer.id;
+  hostStatus.classList.add('hidden');
+  hostReady.classList.remove('hidden');
+  updateStudentCount(); setLocked(true); updateTimerLabel(0);
+}
+
 
     function setLocked(v){
       locked = v;
@@ -508,30 +519,29 @@
       else  { buzzerBtn.classList.remove('disabled'); buzzerBtn.disabled = false; }
     }
 
-    function startClient(host){
-      try{
-        showClientMsg('Conectando con el profesor…');
-        clientPeer = new Peer(undefined, PEER_OPTS);
-        clientPeer.on('open', ()=>{
-          clientConn = clientPeer.connect(host, { reliable:true });
-          clientConn.on('open', ()=>{
-            showClientMsg('');
-            clientConn.send({ type:'JOIN', name: clientName });
-            youAre.textContent = clientName;
-            show(views.clientBuzzer);
-            setClientLocked(true);
-            setBuzzed(false);
-            clientConn.on('data', (data)=>onClientData(data));
-            clientConn.on('close', ()=>{ alert('El profesor ha cerrado la sesión.'); location.reload(); });
-            clientConn.on('error', (err)=>{ console.error('Conn error (client):', err); showClientMsg('Error de conexión con el profesor. Verifica el ID.', true); });
-          });
-          clientConn.on('error', (err)=>{ console.error('Connect error:', err); showClientMsg('No se pudo conectar al host. Verifica el ID.', true); });
-        });
-        clientPeer.on('error', (err)=>{
-          console.error('PeerJS error (client):', err);
-          const msg=(err?.type || err?.message || 'desconocido');
-          showClientMsg('Error: ' + msg, true);
-        });
+    async function startClient(host){
+  try{
+    showClientMsg('Conectando con el profesor…');
+    clientPeer = await createPeerWithFallback(undefined, 'CLIENT');
+    if (!clientPeer){ showClientMsg('Error de red (no se pudo abrir socket). Prueba otra red o desactiva bloqueadores.', true); return; }
+    const c = clientPeer.connect(host, { reliable:true });
+    c.on('open', ()=>{
+      clientConn = c;
+      showClientMsg('');
+      clientConn.send({ type:'JOIN', name: clientName });
+      youAre.textContent = clientName;
+      show(views.clientBuzzer);
+      setClientLocked(true); setBuzzed(false);
+      clientConn.on('data', (data)=>onClientData(data));
+      clientConn.on('close', ()=>{ alert('El profesor ha cerrado la sesión.'); location.reload(); });
+      clientConn.on('error', ()=>{ showClientMsg('Error de conexión con el profesor. Verifica el ID.', true); });
+    });
+    c.on('error', (err)=>{ console.error('Conn error (client):', err); showClientMsg('No se pudo conectar al host. Verifica el ID.', true); });
+  }catch(e){
+    console.error(e);
+    showClientMsg('No se pudo iniciar el cliente.', true);
+  }
+}
       }catch(e){
         console.error(e);
         showClientMsg('No se pudo iniciar el cliente.', true);
